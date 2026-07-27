@@ -1,0 +1,41 @@
+/* a-title-left — 标题竖排在左,主体居中偏右,巨字压右上角
+ *
+ * editorial-mono 的基准骨架,即 2026-07-27 引擎化之前的原始版式。
+ * 构图为左右非对称:左列是标题与元信息组成的文字轴,右侧是主体,
+ * 巨字从右上角切入并被主体压住,形成前后层次。
+ * 适用:主体形状规整、需要中文标题占主导的常规知识卡。
+ *
+ * 骨架只负责头版五元素的定位,外观(字体/字号/颜色/投影)全部来自 engine.html。
+ */
+
+.tint {
+  top: 60px;
+  left: 50%;
+  transform: translateX(-44%);
+}
+
+.ghost {
+  top: 30px;
+  right: -20px;
+}
+
+.title-v {
+  top: 34px;
+  left: 6px;
+}
+
+/* 底部偏移必须补偿展台椭圆的下探量。椭圆在引擎里按 heroSize 等比下探
+ * (heroSize × 32/470),若这里写死 6px,生产组一放大主体椭圆就会多探出来
+ * 压到第一条分章细线上(airy 把主体调到 500 时即复现)。
+ * 用 calc 抵消后,椭圆相对头版底边的位置恒定,与 heroSize 无关;
+ * heroSize=470 时该式精确等于 6px,与引擎化前的版式逐像素一致。 */
+.hero-slot {
+  bottom: calc(var(--p-hero-size) * 32 / 470 - 26px);
+  left: 55%;
+  transform: translateX(-50%);
+}
+
+.meta {
+  left: 2px;
+  bottom: 10px;
+}

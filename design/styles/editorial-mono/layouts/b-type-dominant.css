@@ -1,0 +1,41 @@
+/* b-type-dominant — 巨字为主视觉,主体缩小退居右下角
+ *
+ * 把 Didot 巨字从背景层提到主视觉位置横贯头版,竖排标题压在其上形成叠印,
+ * 主体缩到右下角作点缀。构图重心在文字,主体只作色彩与质感的锚点。
+ * 适用:主体本身形态平淡(粉末、液体、切片),或想强调概念而非实物的选题。
+ *
+ * 主体缩放用 transform 而非改 --p-hero-size,这样生产组调整主体尺寸时
+ * 本骨架的相对比例关系保持不变。
+ *
+ * 骨架只负责头版五元素的定位,外观(字体/字号/颜色/投影)全部来自 engine.html。
+ */
+
+.tint {
+  right: -85px;
+  bottom: -71px;
+  transform: none;
+}
+
+.ghost {
+  top: 140px;
+  left: -26px;
+}
+
+.title-v {
+  top: 24px;
+  left: 6px;
+}
+
+/* 主体抬离头版底边:展台椭圆会向下探出约 20px(-32px 经 0.62 缩放),
+ * 贴底会让椭圆压到第一条分章细线上,破坏细线分章的清晰度(宪法 E5)。 */
+.hero-slot {
+  right: -20px;
+  bottom: 34px;
+  transform: scale(0.62);
+  transform-origin: bottom right;
+}
+
+.meta {
+  left: 2px;
+  bottom: 10px;
+}

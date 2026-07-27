@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>editorial-mono engine</title>
+<!--
+  editorial-mono 参数化渲染引擎
+
+  本文件只含「风格通用」的外观与结构:排版层级、配色推导、章节样式、页脚。
+  头版五个元素(.tint / .ghost / .title-v / .hero-slot / .meta)的**定位不在这里**,
+  由 layouts/<name>.css 完整定义,render.py 渲染时注入。骨架之间因此互不残留属性,
+  新增骨架不必逐条覆盖前一个骨架的定位。
+  直接用浏览器打开本文件时头版会重叠——预期行为,预览请走 render.py。
+
+  所有可调值以 --p-* 自定义属性表达,:root 里的默认值等于 space.json 的 default,
+  由 applyParams() 按传入 params 覆写。未传的参数保持默认。
+
+  ⚠ 派生色(--ink-* / --line / --track / --ghost-ink / --ring)必须声明在 .stage,
+    不能挪回 :root——var() 在声明处求值,写在 :root 会永远按默认 accent 计算
+    (历史上曾导致"换色不生效")。
+-->
+<style>
+  :root {
+    --accent: #C8402F;
+    /* 配对基色:主体色的互补色相压到极深极低饱和,是"有冷暖倾向的高级黑"。
+       默认值仅为兜底,由 applyPalette() 按 accent 覆写。 */
+    --bg-floor: #07090A;
+    --bg-deep: #0A0D0E;
+    --bg-mid: #0E1214;
+    --bg-hi: #14181B;
+
+    /* ---------- 参数默认值(= space.json 的 default) ---------- */
+    --p-serif-cn: 'Songti SC', 'STSong', 'Noto Serif CJK SC', serif;
+    --p-didot: 'Didot', 'Bodoni 72', 'Times New Roman', serif;
+    --p-sans: 'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif;
+
+    /* accent 微染比例。ink-1/ink-2 与 track 由 JS 按固定层级差推出,
+       保证"整体染色水平"只需一个旋钮控制。 */
+    --p-ink-tint: 7%;
+    --p-ink-tint-1: 10%;
+    --p-ink-tint-2: 14%;
+    --p-line-tint: 26%;
+    --p-track-tint: 22%;
+    --p-ghost-tint: 30%;
+    --p-ring-tint: 32%;
+
+    --p-title-size: 100px;
+    --p-title-tracking: 14px;
+    --p-ghost-size: 188px;
+    --p-sec-no-size: 30px;
+    --p-sec-title-size: 25px;
+    --p-body-size: 17.5px;
+    --p-body-leading: 1.58;
+
+    --p-pad-top: 64px;
+    --p-pad-x: 64px;
+    --p-pad-bottom: 48px;
+    --p-header-height: 560px;
+    --p-hero-size: 470px;
+    --p-grid-cols: 1fr 1fr;
+    --p-column-gap: 56px;
+    --p-density: 1;
+
+    --p-grain-opacity: 0.14;
+    --p-hero-shadow-y: 22px;
+    --p-hero-shadow-blur: 26px;
+    --p-hero-shadow-alpha: 0.55;
+    /* emoji 是纯色块、边缘硬,需要比实拍主体更柔更重的投影才不显贴纸感,
+       故由主体投影按固定差值推出,而非另开旋钮。 */
+    --p-emoji-shadow-y: 24px;
+    --p-emoji-shadow-blur: 30px;
+    --p-emoji-shadow-alpha: 0.5;
+    --p-tint-peak: 26%;
+    --p-tint-mid: 10%;
+    --p-tint-size: 500px;
+    --p-ring-width: 1px;
+  }
+
+  /* 文字与线条带一丝主体色,和 accent 细节呼应,但不喧宾夺主。 */
+  .stage {
+    --ink-0: color-mix(in srgb, var(--accent) var(--p-ink-tint), #F7F4EF);
+    --ink-1: color-mix(in srgb, var(--accent) var(--p-ink-tint-1), rgb(247 244 239 / 0.82));
+    --ink-2: color-mix(in srgb, var(--accent) var(--p-ink-tint-2), rgb(247 244 239 / 0.55));
+    --line: color-mix(in srgb, var(--accent) var(--p-line-tint), rgb(247 244 239 / 0.15));
+    --track: color-mix(in srgb, var(--accent) var(--p-track-tint), rgb(247 244 239 / 0.10));
+    --ghost-ink: color-mix(in srgb, var(--accent) var(--p-ghost-tint), rgb(247 244 239 / 0.085));
+    --ring: color-mix(in srgb, var(--accent) var(--p-ring-tint), rgb(247 244 239 / 0.20));
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    background: var(--bg-floor);
+    font-family: var(--p-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage {
+    position: relative;
+    width: 1080px;
+    padding: var(--p-pad-top) var(--p-pad-x) var(--p-pad-bottom);
+    overflow: hidden;
+    /* 顶部(主体区)色相最浓,向下渐次沉降,但底色本身(--bg-deep)
+       已经是带色相的深底,不会沉到纯中性灰——保证卡片下半段依然在同一氛围里 */
+    background: linear-gradient(180deg,
+      var(--bg-hi) 0%, var(--bg-mid) 40%, var(--bg-deep) 78%, var(--bg-deep) 100%);
+    color: var(--ink-0);
+  }
+
+  /* 细噪点,纸感 */
+  .grain {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: var(--p-grain-opacity);
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
+
+  /* ---------- 头版:外观在此,定位由 layouts/*.css 提供 ---------- */
+  .header {
+    position: relative;
+    z-index: 1;
+    height: var(--p-header-height);
+    margin-bottom: 8px;
+  }
+
+  /* 主体背后一枚极淡的主题色圆,唯一的大面积用色 */
+  .tint {
+    position: absolute;
+    width: var(--p-tint-size);
+    height: var(--p-tint-size);
+    border-radius: 50%;
+    background: radial-gradient(closest-side,
+      color-mix(in srgb, var(--accent) var(--p-tint-peak), transparent) 0%,
+      color-mix(in srgb, var(--accent) var(--p-tint-mid), transparent) 55%,
+      transparent 100%);
+  }
+
+  .ghost {
+    position: absolute;
+    font-family: var(--p-didot);
+    font-style: italic;
+    font-size: var(--p-ghost-size);
+    line-height: 1;
+    letter-spacing: 6px;
+    white-space: nowrap;
+    color: var(--ghost-ink);
+  }
+
+  .title-v {
+    position: absolute;
+    writing-mode: vertical-rl;
+    /* 必须禁止折行:竖排文本一旦放不下就会折成第二列,而 vertical-rl 的列序
+       是从右往左,"西红柿"会被排成"柿|西红"——阅读顺序打乱、标题不可读。
+       宁可溢出头版(设计部一眼能看见并调参),也不能静默排错。 */
+    white-space: nowrap;
+    font-family: var(--p-serif-cn);
+    font-weight: 900;
+    font-size: var(--p-title-size);
+    line-height: 1.06;
+    letter-spacing: var(--p-title-tracking);
+    color: var(--ink-0);
+  }
+  /* 标题旁一根主题色细线,竖排的注脚 */
+  .title-v::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: -18px;
+    width: 2px; height: 92%;
+    background: var(--accent);
+  }
+
+  .hero-slot {
+    position: absolute;
+    width: var(--p-hero-size);
+    height: var(--p-hero-size);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  /* 展台:一道细椭圆线,画廊底座,替代发光。尺寸随主体等比缩放。
+     主体经 cutout.py 紧裁后底对齐到 slot 底边,椭圆中线即主体基线 */
+  .hero-slot::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--p-hero-size) * -32 / 470);
+    width: calc(var(--p-hero-size) * 340 / 470);
+    height: calc(var(--p-hero-size) * 78 / 470);
+    transform: translateX(-50%);
+    border-radius: 50%;
+    border: var(--p-ring-width) solid var(--ring);
+  }
+  .hero-photo {
+    position: relative;
+    z-index: 1;
+    width: var(--p-hero-size);
+    height: var(--p-hero-size);
+    object-fit: contain;
+    /* 底对齐:紧裁素材的底边即主体基线 */
+    object-position: 50% 100%;
+    filter: drop-shadow(0 var(--p-hero-shadow-y) var(--p-hero-shadow-blur)
+      rgb(0 0 0 / var(--p-hero-shadow-alpha)));
+  }
+  .hero-emoji {
+    position: relative;
+    z-index: 1;
+    font-size: calc(var(--p-hero-size) * 230 / 470);
+    line-height: 1;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 var(--p-emoji-shadow-y) var(--p-emoji-shadow-blur)
+      rgb(0 0 0 / var(--p-emoji-shadow-alpha)));
+  }
+
+  .meta {
+    position: absolute;
+    max-width: 300px;
+  }
+  .meta .cat {
+    font-family: var(--p-sans);
+    font-size: calc(var(--p-body-size) * 17 / 17.5);
+    font-weight: 400;
+    letter-spacing: 4px;
+    color: color-mix(in srgb, var(--accent) var(--p-ink-tint-2), rgb(247 244 239 / 0.66));
+    margin-bottom: 12px;
+  }
+  .meta .rule {
+    width: 44px; height: 1px;
+    background: var(--accent);
+    margin-bottom: 12px;
+  }
+  .meta .latin {
+    font-family: var(--p-didot);
+    font-style: italic;
+    font-size: calc(var(--p-body-size) * 21 / 17.5);
+    letter-spacing: 3px;
+    color: var(--ink-1);
+  }
+
+  /* ---------- 章节 ---------- */
+  .grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: var(--p-grid-cols);
+    column-gap: var(--p-column-gap);
+  }
+  .section {
+    grid-column: span 1;
+    border-top: 1px solid var(--line);
+    padding: calc(22px * var(--p-density)) 0 calc(26px * var(--p-density));
+  }
+  .section.span-full { grid-column: 1 / -1; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: calc(20px * var(--p-density));
+  }
+  .sec-no {
+    font-family: var(--p-didot);
+    font-style: italic;
+    font-size: var(--p-sec-no-size);
+    line-height: 1;
+    color: var(--accent);
+  }
+  .sec-title {
+    font-family: var(--p-serif-cn);
+    font-weight: 900;
+    font-size: var(--p-sec-title-size);
+    letter-spacing: 3px;
+    color: var(--ink-0);
+  }
+
+  /* style: list */
+  .list-items {
+    display: flex;
+    flex-direction: column;
+    gap: calc(11px * var(--p-density));
+  }
+  .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: var(--p-body-size);
+    line-height: var(--p-body-leading);
+    font-weight: 400;
+    color: var(--ink-1);
+  }
+  .list-item::before {
+    content: '';
+    flex: none;
+    width: 14px; height: 1px;
+    margin-top: 14px;
+    background: var(--accent);
+  }
+
+  /* style: tags — 斜杠分隔的一行宋体,不做胶囊 */
+  .tag-items {
+    font-family: var(--p-serif-cn);
+    font-size: calc(var(--p-body-size) * 19 / 17.5);
+    letter-spacing: 2px;
+    line-height: 2.1;
+    color: var(--ink-1);
+  }
+  .tag-items .sep {
+    color: var(--accent);
+    margin: 0 13px;
+    font-family: var(--p-didot);
+    font-style: italic;
+  }
+
+  /* style: metric */
+  .metric-items { display: flex; flex-direction: column; }
+  .metric-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 120px;
+    align-items: center;
+    gap: 24px;
+    padding: calc(11px * var(--p-density)) 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) var(--p-ink-tint-2), rgba(245, 242, 237, 0.09));
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label {
+    font-size: calc(var(--p-body-size) * 17 / 17.5);
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    color: var(--ink-1);
+  }
+  .metric-track {
+    position: relative;
+    height: 1px;
+    background: var(--track);
+  }
+  .metric-fill {
+    position: absolute;
+    left: 0; top: -1px;
+    height: 3px;
+    background: var(--accent);
+  }
+  .metric-value {
+    font-family: var(--p-didot);
+    font-size: calc(var(--p-body-size) * 23 / 17.5);
+    letter-spacing: 1px;
+    text-align: right;
+    color: var(--ink-0);
+  }
+
+  /* style: text — 引文式 */
+  .block-text {
+    position: relative;
+    font-family: var(--p-serif-cn);
+    font-size: calc(var(--p-body-size) * 19 / 17.5);
+    line-height: 1.9;
+    color: var(--ink-1);
+    padding-left: 22px;
+    border-left: 2px solid var(--accent);
+  }
+
+  /* ---------- 尾部 ---------- */
+  .footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--line);
+    padding-top: calc(22px * var(--p-density));
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .footer .brand {
+    font-size: calc(var(--p-body-size) * 11 / 17.5);
+    font-weight: 400;
+    letter-spacing: 6px;
+    color: var(--ink-2);
+  }
+  .footer .latin {
+    font-family: var(--p-didot);
+    font-style: italic;
+    font-size: calc(var(--p-body-size) * 15 / 17.5);
+    letter-spacing: 2px;
+    color: var(--ink-2);
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="grain"></div>
+
+  <div class="header">
+    <div class="tint"></div>
+    <div class="ghost" id="ghost"></div>
+    <div class="title-v" id="title-v"></div>
+    <div class="hero-slot" id="hero-slot"></div>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer">
+    <span class="brand">KNOWLEDGE CARD</span>
+    <span class="latin" id="footer-latin"></span>
+  </div>
+</div>
+
+<script>
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  /* 浮点收敛:0.07*100 在 JS 里是 7.000000000000001,直接拼进 CSS 会带出长尾。
+     统一收到 4 位小数再去掉多余的 0。 */
+  function n(v) { return String(+(+v).toFixed(4)); }
+  function pct(v) { return n(v * 100) + '%'; }
+  function px(v) { return n(v) + 'px'; }
+
+  /* ---- 配对基色推导 ---------------------------------------------------
+     取主体色的互补色相(偏移量由 palette.bgHueShift 控制),压到极低饱和 +
+     极低明度,得到"带冷暖倾向的高级黑"。主体色与底色异色相时对比最强,
+     主体最跳;若底色沿用主体色相,主体会淹没在同色背景里。 */
+  function hexToHue(hex) {
+    const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(hex).trim());
+    if (!m) return null;
+    const [r, g, b] = m.slice(1).map(v => parseInt(v, 16) / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    if (!d) return 0;
+    let h;
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return ((h * 60) % 360 + 360) % 360;
+  }
+
+  function hslHex(h, s, l) {
+    const f = k0 => {
+      const k = (k0 + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+      return Math.round(c * 255).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
+
+  const BG_SLOTS = ['--bg-floor', '--bg-deep', '--bg-mid', '--bg-hi'];
+
+  function applyPalette(accent, params) {
+    const root = document.documentElement;
+    root.style.setProperty('--accent', accent);
+    const hue = hexToHue(accent);
+    if (hue === null) return;
+
+    const shift = params['palette.bgHueShift'] ?? 180;
+    const sat = params['palette.bgSaturation'] ?? [0.32, 0.30, 0.27, 0.24];
+    const lit = params['palette.bgLightness'] ?? [0.032, 0.052, 0.076, 0.112];
+    const c = (hue + shift) % 360;
+
+    BG_SLOTS.forEach((slot, i) => {
+      root.style.setProperty(slot, hslHex(c, sat[i], lit[i]));
+    });
+  }
+
+  /* 参数 → CSS 自定义属性。未传的键不设置,保留 :root 里的默认值。 */
+  function applyParams(params) {
+    const root = document.documentElement;
+    const set = (name, value) => root.style.setProperty(name, value);
+    const has = k => params[k] !== undefined && params[k] !== null;
+
+    if (has('type.serifCN')) set('--p-serif-cn', params['type.serifCN']);
+    if (has('type.didot'))   set('--p-didot', params['type.didot']);
+    if (has('type.sans'))    set('--p-sans', params['type.sans']);
+
+    /* ink-1 / ink-2 / track 按固定层级差从主旋钮推出,
+       这样"整体染色水平"只需一个参数控制,层级关系恒定。 */
+    if (has('palette.inkTint')) {
+      const t = params['palette.inkTint'];
+      set('--p-ink-tint', pct(t));
+      set('--p-ink-tint-1', pct(t + 0.03));
+      set('--p-ink-tint-2', pct(t + 0.07));
+    }
+    if (has('palette.lineTint')) {
+      const t = params['palette.lineTint'];
+      set('--p-line-tint', pct(t));
+      set('--p-track-tint', pct(t - 0.04));
+    }
+    if (has('palette.ghostTint')) set('--p-ghost-tint', pct(params['palette.ghostTint']));
+    if (has('palette.ringTint'))  set('--p-ring-tint', pct(params['palette.ringTint']));
+
+    if (has('type.titleSize'))     set('--p-title-size', px(params['type.titleSize']));
+    if (has('type.titleTracking')) set('--p-title-tracking', px(params['type.titleTracking']));
+    if (has('type.ghostSize'))     set('--p-ghost-size', px(params['type.ghostSize']));
+    if (has('type.secNoSize'))     set('--p-sec-no-size', px(params['type.secNoSize']));
+    if (has('type.secTitleSize'))  set('--p-sec-title-size', px(params['type.secTitleSize']));
+    if (has('type.bodySize'))      set('--p-body-size', px(params['type.bodySize']));
+    if (has('type.bodyLeading'))   set('--p-body-leading', n(params['type.bodyLeading']));
+
+    if (has('layout.pagePadding')) {
+      const [t, x, b] = params['layout.pagePadding'];
+      set('--p-pad-top', px(t));
+      set('--p-pad-x', px(x));
+      set('--p-pad-bottom', px(b));
+    }
+    if (has('layout.headerHeight')) set('--p-header-height', px(params['layout.headerHeight']));
+    if (has('layout.heroSize'))     set('--p-hero-size', px(params['layout.heroSize']));
+    if (has('layout.columnGap'))    set('--p-column-gap', px(params['layout.columnGap']));
+    if (has('layout.density'))      set('--p-density', n(params['layout.density']));
+    if (has('layout.columns')) {
+      const cols = Number(params['layout.columns']);
+      set('--p-grid-cols', cols === 1 ? '1fr' : '1fr 1fr');
+    }
+
+    if (has('material.grainOpacity')) set('--p-grain-opacity', n(params['material.grainOpacity']));
+    if (has('material.heroShadowY') || has('material.heroShadowBlur') || has('material.heroShadowAlpha')) {
+      const y = params['material.heroShadowY'] ?? 22;
+      const blur = params['material.heroShadowBlur'] ?? 26;
+      const alpha = params['material.heroShadowAlpha'] ?? 0.55;
+      set('--p-hero-shadow-y', px(y));
+      set('--p-hero-shadow-blur', px(blur));
+      set('--p-hero-shadow-alpha', n(alpha));
+      /* emoji 边缘硬,投影需更柔更重,按固定差值跟随主体投影 */
+      set('--p-emoji-shadow-y', px(y + 2));
+      set('--p-emoji-shadow-blur', px(blur + 4));
+      set('--p-emoji-shadow-alpha', n(alpha - 0.05));
+    }
+    if (has('material.tintPeak')) {
+      const peak = params['material.tintPeak'];
+      set('--p-tint-peak', pct(peak));
+      /* 中段停止点按 5/13 跟随峰值,默认 26% → 10% */
+      set('--p-tint-mid', pct(peak * 5 / 13));
+    }
+    if (has('material.tintSize'))  set('--p-tint-size', px(params['material.tintSize']));
+    if (has('material.ringWidth')) set('--p-ring-width', px(params['material.ringWidth']));
+  }
+
+  function renderBlockBody(block) {
+    const style = block.style || 'list';
+    const items = block.items || [];
+    if (style === 'list') {
+      return `<div class="list-items">${items.map(t =>
+        `<div class="list-item">${esc(t)}</div>`).join('')}</div>`;
+    }
+    if (style === 'tags') {
+      return `<div class="tag-items">${items.map(esc).join('<span class="sep">/</span>')}</div>`;
+    }
+    if (style === 'metric') {
+      return `<div class="metric-items">${items.map(it => {
+        const p = Math.max(0, Math.min(100, Number(it.percent ?? 0)));
+        return `<div class="metric-row">
+          <span class="metric-label">${esc(it.label)}</span>
+          <span class="metric-track"><span class="metric-fill" style="width:${p}%"></span></span>
+          <span class="metric-value">${esc(it.value ?? '')}</span>
+        </div>`;
+      }).join('')}</div>`;
+    }
+    if (style === 'text') {
+      return `<div class="block-text">${esc(block.text)}</div>`;
+    }
+    return '';
+  }
+
+  /**
+   * data   = { emoji, name, nameEn, category, themeColor, hero, blocks: [...] }
+   *          字段说明见同目录 schema.md。icon 字段保留兼容,当前版式不展示。
+   * params = space.json 的点分键名 → 值。缺省时用 :root 里的默认值。
+   */
+  function renderCard(data, params) {
+    params = params || {};
+    applyParams(params);
+    /* 组级固定主体色优先于单卡 themeColor。render.py 通常已完成这一优先级
+       解析并把结果写进 data.themeColor,此处兜底以支持直接调用。 */
+    const accent = params['palette.accent'] || data.themeColor;
+    if (accent) applyPalette(accent, params);
+
+    const latin = (data.nameEn || '').toUpperCase();
+    document.getElementById('ghost').textContent = latin || (data.name || '');
+    document.getElementById('title-v').textContent = data.name || '';
+    document.getElementById('footer-latin').textContent = latin;
+
+    document.getElementById('meta').innerHTML =
+      (data.category ? `<div class="cat">${esc(data.category)}</div>` : '')
+      + `<div class="rule"></div>`
+      + (latin ? `<div class="latin">${esc(latin)}</div>` : '');
+
+    const heroSlot = document.getElementById('hero-slot');
+    if (data.hero) {
+      heroSlot.innerHTML = `<img class="hero-photo" src="${data.hero}">`;
+    } else {
+      heroSlot.innerHTML = `<div class="hero-emoji">${esc(data.emoji || '')}</div>`;
+    }
+
+    document.getElementById('grid').innerHTML = (data.blocks || []).map((block, i) => `
+      <div class="section${block.span === 'full' ? ' span-full' : ''}">
+        <div class="sec-head">
+          <span class="sec-no">${String(i + 1).padStart(2, '0')}</span>
+          <span class="sec-title">${esc(block.title || '')}</span>
+        </div>
+        ${renderBlockBody(block)}
+      </div>`).join('');
+  }
+
+  window.renderCard = renderCard;
+</script>
+</body>
+</html>

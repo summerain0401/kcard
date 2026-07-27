@@ -1,0 +1,43 @@
+/* c-hero-bleed — 主体放大出血到右上,文字轴退到左侧,巨字沉底
+ *
+ * 主体越出画布边缘形成裁切,冲击力最强的一版。左侧自上而下是
+ * 元信息 → 竖排标题的文字轴,巨字沉到底部作基座。
+ * 适用:主体质感精良、值得大面积展示的素材(带光泽的果实、器物)。
+ *
+ * 出血靠 transform 放大 + 负偏移,不改 --p-hero-size,
+ * 因此生产组调整主体尺寸时出血比例保持不变。
+ *
+ * 骨架只负责头版五元素的定位,外观(字体/字号/颜色/投影)全部来自 engine.html。
+ */
+
+.tint {
+  top: -10px;
+  right: -50px;
+  left: auto;
+  transform: none;
+}
+
+.ghost {
+  bottom: -14px;
+  left: -26px;
+}
+
+/* 标题锚在底部向上生长,而非从顶部下垂:头版高度被生产组调小时(如 stark 的
+ * 520px),从顶部定位会让长标题挤不下。锚底后标题始终贴着巨字上沿叠印,
+ * 高度变化由上方留白吸收。 */
+.title-v {
+  bottom: 96px;
+  left: 6px;
+}
+
+.hero-slot {
+  top: -50px;
+  right: -70px;
+  transform: scale(1.12);
+  transform-origin: top right;
+}
+
+.meta {
+  left: 2px;
+  top: 26px;
+}

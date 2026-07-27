@@ -1,0 +1,43 @@
+{
+  "name": "classic",
+  "displayName": "经典 · 标题主导",
+  "description": "editorial-mono 的基准搭配,等同 2026-07-27 引擎化之前的原始视觉。竖排宋体标题占主导,主体居中偏右,巨字压右上角。参数全部取 space.json 的 default,是其余搭配的起点与像素基准。",
+  "layout": "a-title-left",
+
+  "params": {
+    "palette.accent": null,
+    "palette.bgHueShift": 180,
+    "palette.bgSaturation": [0.32, 0.30, 0.27, 0.24],
+    "palette.bgLightness": [0.032, 0.052, 0.076, 0.112],
+    "palette.inkTint": 0.07,
+    "palette.lineTint": 0.26,
+    "palette.ghostTint": 0.30,
+    "palette.ringTint": 0.32,
+
+    "type.serifCN": "'Songti SC', 'STSong', 'Noto Serif CJK SC', serif",
+    "type.didot": "'Didot', 'Bodoni 72', 'Times New Roman', serif",
+    "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
+    "type.titleSize": 100,
+    "type.titleTracking": 14,
+    "type.ghostSize": 188,
+    "type.secNoSize": 30,
+    "type.secTitleSize": 25,
+    "type.bodySize": 17.5,
+    "type.bodyLeading": 1.58,
+
+    "layout.columns": 2,
+    "layout.columnGap": 56,
+    "layout.pagePadding": [64, 64, 48],
+    "layout.headerHeight": 560,
+    "layout.heroSize": 470,
+    "layout.density": 1.0,
+
+    "material.grainOpacity": 0.14,
+    "material.heroShadowY": 22,
+    "material.heroShadowBlur": 26,
+    "material.heroShadowAlpha": 0.55,
+    "material.tintPeak": 0.26,
+    "material.tintSize": 500,
+    "material.ringWidth": 1
+  }
+}

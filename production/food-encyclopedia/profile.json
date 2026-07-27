@@ -1,3 +1,5 @@
 {
-  "style": "editorial-mono"
+  "style": "editorial-mono",
+  "preset": "classic",
+  "params": {}
 }

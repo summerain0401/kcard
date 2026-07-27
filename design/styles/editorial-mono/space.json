@@ -13,29 +13,23 @@
   ],
 
   "params": {
-    "palette.accentHue": {
-      "default": null, "range": [0, 360], "free": true, "scope": "production",
-      "why": "留空则由 render.py 从 hero 图自动提取;显式填写则以填写值为准"
+    "palette.accent": {
+      "default": null, "type": "hex", "scope": "production",
+      "why": "组级固定主体色(如 \"#C8402F\")。留空则每张卡各自取色:优先用 card.json 的 themeColor,再缺则由 render.py 从 hero 图自动提取。色相全域自由,底色会随之推导,故无需限制取值"
     },
     "palette.bgHueShift": {
       "default": 180, "range": [150, 210], "scope": "production",
       "why": "底色相对 accent 的色相偏移。±30° 内仍满足宪法 H2 的异色相要求"
     },
-    "palette.bgSaturationFloor": {
-      "default": 0.32, "range": [0.10, 0.45], "scope": "production",
-      "why": "最深档(--bg-floor)饱和度。决定底色的冷暖倾向强弱"
+    "palette.bgSaturation": {
+      "default": [0.32, 0.30, 0.27, 0.24],
+      "range": [0.10, 0.45], "length": 4, "scope": "production",
+      "why": "背景四档饱和度,自下(floor)而上(hi)。决定底色的冷暖倾向强弱,现行实现自下而上递减"
     },
-    "palette.bgSaturationTop": {
-      "default": 0.24, "range": [0.10, 0.40], "scope": "production",
-      "why": "最亮档(--bg-hi)饱和度。现行实现自下而上递减"
-    },
-    "palette.bgLightnessFloor": {
-      "default": 0.032, "range": [0.02, 0.06], "scope": "production",
-      "why": "最深档明度"
-    },
-    "palette.bgLightnessTop": {
-      "default": 0.112, "range": [0.06, 0.12], "scope": "production",
-      "why": "最亮档明度。上限 0.12 是宪法 H1,不可越界"
+    "palette.bgLightness": {
+      "default": [0.032, 0.052, 0.076, 0.112],
+      "range": [0.02, 0.12], "length": 4, "scope": "production",
+      "why": "背景四档明度,自下而上递增,构成头版聚光的渐变。最大值上限 0.12 是宪法 H1。四档整组暴露而非由首尾插值——现行值不落在任何简单插值曲线上(线性/几何/幂曲线均拟合不出),且渐变形状本身即设计控制项"
     },
     "palette.inkTint": {
       "default": 0.07, "range": [0, 0.15], "scope": "production",
@@ -171,15 +165,15 @@
 
   "invariants": [
     {
-      "rule": "hueDistance(palette.accentHue, palette.accentHue + palette.bgHueShift) >= 120",
-      "why": "宪法 H2:底色与主体色必须异色相,否则主体淹没在背景里"
+      "rule": "min(palette.bgHueShift, 360 - palette.bgHueShift) >= 120",
+      "why": "宪法 H2:底色与主体色必须异色相,否则主体淹没在背景里。底色由主体色按 bgHueShift 旋转推导,故约束落在偏移量本身"
     },
     {
-      "rule": "palette.bgLightnessTop <= 0.12",
+      "rule": "max(palette.bgLightness) <= 0.12",
       "why": "宪法 H1:极深底是本风格地基"
     },
     {
-      "rule": "palette.bgLightnessFloor < palette.bgLightnessTop",
+      "rule": "isAscending(palette.bgLightness)",
       "why": "背景四档必须自下而上递增,否则渐变方向反转,头版失去聚光效果"
     },
     {

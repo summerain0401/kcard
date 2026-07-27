@@ -1,0 +1,40 @@
+{
+  "name": "stark",
+  "displayName": "冷峻 · 主体出血",
+  "description": "主体放大出血到右上角,底色压得更深更中性,噪点关闭,accent 微染收到最低,行距收紧。对比最强、最锋利的一版。适合质感精良的主图素材,以及希望画面压过文字的选题。",
+  "layout": "c-hero-bleed",
+
+  "params": {
+    "palette.accent": null,
+    "palette.bgHueShift": 180,
+    "palette.bgSaturation": [0.20, 0.18, 0.16, 0.14],
+    "palette.bgLightness": [0.020, 0.034, 0.050, 0.072],
+    "palette.inkTint": 0.03,
+    "palette.lineTint": 0.18,
+    "palette.ghostTint": 0.20,
+    "palette.ringTint": 0.26,
+
+    "type.titleSize": 92,
+    "type.titleTracking": 12,
+    "type.ghostSize": 150,
+    "type.secNoSize": 28,
+    "type.secTitleSize": 23,
+    "type.bodySize": 16.5,
+    "type.bodyLeading": 1.48,
+
+    "layout.columns": 2,
+    "layout.columnGap": 48,
+    "layout.pagePadding": [56, 56, 44],
+    "layout.headerHeight": 520,
+    "layout.heroSize": 460,
+    "layout.density": 0.85,
+
+    "material.grainOpacity": 0,
+    "material.heroShadowY": 20,
+    "material.heroShadowBlur": 24,
+    "material.heroShadowAlpha": 0.68,
+    "material.tintPeak": 0.14,
+    "material.tintSize": 460,
+    "material.ringWidth": 1
+  }
+}
