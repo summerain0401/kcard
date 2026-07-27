@@ -1,0 +1,32 @@
+{
+  "style": "almanac",
+  "preset": "plate",
+
+  "params": {
+    "type.serifCN": "'Baskerville', 'PT Serif', 'Songti SC', 'STSong', serif",
+    "type.titleSize": 68,
+    "type.titleTracking": 1,
+    "type.subtitleSize": 19,
+    "type.bodySize": 16.5,
+    "type.bodyLeading": 1.70,
+    "type.labelSize": 13,
+
+    "paper.hue": 38,
+    "paper.saturation": 0.16,
+    "paper.lightness": 0.92,
+    "paper.grainOpacity": 0.15,
+    "paper.vignette": 0.05,
+
+    "ink.hue": 22,
+    "ink.saturation": 0.18,
+    "ink.lightness": 0.15,
+    "ink.secondaryLightness": 0.40,
+
+    "layout.headerHeight": 460,
+    "layout.specimenSize": 320,
+    "layout.density": 1.05,
+
+    "annotation.reach": 110,
+    "specimen.baselineWidth": 200
+  }
+}

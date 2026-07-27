@@ -1,0 +1,61 @@
+{
+  "data": {
+    "emoji": "🍂",
+    "name": "ephemeral",
+    "category": "/ɪˈfem(ə)rəl/ · adj.",
+    "nameEn": "ephēmeros · Greek",
+    "specimenLabels": [
+      { "text": "epi- 之上", "side": "left" },
+      { "text": "hēmera 一日", "side": "left" },
+      { "text": "-al 形容词后缀", "side": "right" }
+    ],
+    "blocks": [
+      {
+        "title": "核心释义",
+        "style": "list",
+        "items": [
+          "短暂的,转瞬即逝的——强调美好的东西留不住,带惋惜色彩",
+          "生物学上指仅存活一天的,如蜉蝣、某些真菌"
+        ]
+      },
+      {
+        "title": "例句",
+        "style": "list",
+        "items": [
+          "Fame in the internet age is ephemeral. —— 互联网时代的名气转瞬即逝。",
+          "She photographs ephemeral things: frost, foam, shadows. —— 她专拍留不住的东西:霜、泡沫、影子。"
+        ]
+      },
+      {
+        "title": "高频搭配",
+        "style": "tags",
+        "items": ["ephemeral beauty", "ephemeral pleasure", "ephemeral art"]
+      },
+      {
+        "title": "语域适用度",
+        "style": "metric",
+        "items": [
+          { "label": "口语", "value": "偏文", "percent": 25 },
+          { "label": "书面", "value": "自然", "percent": 90 },
+          { "label": "学术", "value": "常用", "percent": 78 }
+        ]
+      },
+      {
+        "title": "易混辨析",
+        "style": "list",
+        "span": "full",
+        "items": [
+          "temporary 只说明「非永久」,中性,可指三个月的合同;ephemeral 强调短到抓不住,且多用于美好或抽象之物",
+          "transient 侧重「路过、不停留」,常修饰人口、住客;ephemeral 侧重「存在本身就短」",
+          "fleeting 与之最近,但更口语、更常修饰瞬间感受(a fleeting smile),ephemeral 更书面"
+        ]
+      },
+      {
+        "title": "词源",
+        "style": "text",
+        "span": "full",
+        "text": "源自希腊语 ephēmeros,由 epi-(在……之上)与 hēmera(日)构成,字面即「只在这一日之上」。蜉蝣的学名 Ephemeroptera 同出此源——古希腊人早已注意到,有些生命的全部长度就是一个白天。"
+      }
+    ]
+  }
+}

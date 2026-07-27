@@ -1,0 +1,56 @@
+{
+  "data": {
+    "emoji": "🧊",
+    "name": "break the ice",
+    "category": "/breɪk ðə aɪs/ · phr.",
+    "nameEn": "idiom · since 1600s",
+    "blocks": [
+      {
+        "title": "核心释义",
+        "style": "list",
+        "items": [
+          "打破僵局,让陌生或尴尬的场合松弛下来——通常指第一句话或第一个举动",
+          "常用于社交、会议、初次见面;不用于化解已经激化的冲突"
+        ]
+      },
+      {
+        "title": "例句",
+        "style": "list",
+        "items": [
+          "He told a bad joke to break the ice, and it somehow worked. —— 他讲了个烂笑话来暖场,居然还真管用。",
+          "Someone had to break the ice, so I asked about her hometown. —— 总得有人先开口,于是我问起她的家乡。"
+        ]
+      },
+      {
+        "title": "高频搭配",
+        "style": "tags",
+        "items": ["break the ice with", "icebreaker", "get the ball rolling"]
+      },
+      {
+        "title": "语域适用度",
+        "style": "metric",
+        "items": [
+          { "label": "口语", "value": "很自然", "percent": 92 },
+          { "label": "书面", "value": "可用", "percent": 64 },
+          { "label": "学术", "value": "不宜", "percent": 12 }
+        ]
+      },
+      {
+        "title": "易混辨析",
+        "style": "list",
+        "span": "full",
+        "items": [
+          "break the ice 针对「陌生带来的拘谨」;clear the air 针对「误会或积怨」,两者场景不同,不可互换",
+          "get the ball rolling 是「让事情开始推进」,重点在启动进程,不涉及气氛",
+          "名词形式 icebreaker 已固化,指暖场活动或问题;但动词形态不能写成 break ice(缺冠词)"
+        ]
+      },
+      {
+        "title": "词源",
+        "style": "text",
+        "span": "full",
+        "text": "本义是破冰船凿开封冻的航道,让船队得以通行。十七世纪起被借用于社交场合——把陌生人之间那层看不见的僵硬,想象成一层需要凿开的冰。后来专为此设计的破冰船被称作 icebreaker,而这个词又反向回到社交语境,成了「暖场问题」的名字。"
+      }
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "data": {
+    "emoji": "⏳",
+    "name": "procrastinate",
+    "category": "/prəˈkræstɪneɪt/ · v.",
+    "nameEn": "procrastinare · Latin",
+    "specimenLabels": [
+      { "text": "pro- 向前", "side": "left" },
+      { "text": "cras 明天", "side": "left" },
+      { "text": "-ate 动词后缀", "side": "right" }
+    ],
+    "blocks": [
+      {
+        "title": "核心释义",
+        "style": "list",
+        "items": [
+          "拖延,把该做的事一再推后——含自责意味,主语通常是拖延者本人",
+          "不及物为主。要说拖延某事,用 procrastinate on / about,不直接跟宾语"
+        ]
+      },
+      {
+        "title": "例句",
+        "style": "list",
+        "items": [
+          "I procrastinated on the report until the night before. —— 那份报告我一直拖到交稿前一晚。",
+          "Stop procrastinating and just send the email. —— 别磨蹭了,把邮件发出去。"
+        ]
+      },
+      {
+        "title": "高频搭配",
+        "style": "tags",
+        "items": ["procrastinate on", "chronic procrastinator", "stop procrastinating"]
+      },
+      {
+        "title": "语域适用度",
+        "style": "metric",
+        "items": [
+          { "label": "口语", "value": "自然", "percent": 72 },
+          { "label": "书面", "value": "常用", "percent": 85 },
+          { "label": "学术", "value": "心理学术语", "percent": 66 }
+        ]
+      },
+      {
+        "title": "易混辨析",
+        "style": "list",
+        "span": "full",
+        "items": [
+          "delay 是中性的「推迟」,可以是外因(航班延误),procrastinate 一定是自己拖,且带道德评判",
+          "postpone 是有意识地改期,通常已定新时间;procrastinate 是无限期地不动手",
+          "hesitate 是「犹豫要不要做」,决定未定;procrastinate 是「已知该做却不做」"
+        ]
+      },
+      {
+        "title": "词源",
+        "style": "text",
+        "span": "full",
+        "text": "拉丁语 procrastinare,由 pro-(向前)与 cras(明天)构成,字面是「把事情挪到明天去」。同源词 crastinate 早已消失,只剩这个带 pro- 的版本活了下来——某种意义上语言本身也印证了这个词:人们留下的,正是「推到明天」那一半。"
+      }
+    ]
+  }
+}
