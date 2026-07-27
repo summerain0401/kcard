@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>food-glass card</title>
+<style>
+  :root {
+    --accent: #C8402F;
+    /* 配对基色:主体色的互补色相压到极深极低饱和,是"有冷暖倾向的高级黑"。
+       主体不能沉在同色系背景里——黑配红之所以高级,是因为对比让主体色
+       达到最强视觉冲击。以下默认值由 JS 按 accent 色相 +180° 覆写,
+       这里只为直接打开 HTML 预览时兜底。 */
+    --bg-floor: #07090A;
+    --bg-deep: #0A0D0E;
+    --bg-mid: #0E1214;
+    --bg-hi: #14181B;
+    --serif-cn: 'Songti SC', 'STSong', 'Noto Serif CJK SC', serif;
+    --didot: 'Didot', 'Bodoni 72', 'Times New Roman', serif;
+    --sans: 'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif;
+  }
+
+  /* 文字与线条带一丝主体色,和 accent 细节呼应,但不喧宾夺主。
+     ⚠ 这些派生色不能挪到 :root:JS 覆写 --accent 后,var() 在声明处
+     求值,写在 :root 会永远按默认红计算(曾导致"换色不生效")。 */
+  .stage {
+    --ink-0: color-mix(in srgb, var(--accent) 7%, #F7F4EF);
+    --ink-1: color-mix(in srgb, var(--accent) 10%, rgb(247 244 239 / 0.82));
+    --ink-2: color-mix(in srgb, var(--accent) 14%, rgb(247 244 239 / 0.55));
+    --line: color-mix(in srgb, var(--accent) 26%, rgb(247 244 239 / 0.15));
+    --track: color-mix(in srgb, var(--accent) 22%, rgb(247 244 239 / 0.10));
+    --ghost-ink: color-mix(in srgb, var(--accent) 30%, rgb(247 244 239 / 0.085));
+    --ring: color-mix(in srgb, var(--accent) 32%, rgb(247 244 239 / 0.20));
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    background: var(--bg-floor);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage {
+    position: relative;
+    width: 1080px;
+    padding: 64px 64px 48px;
+    overflow: hidden;
+    /* 顶部(主体区)色相最浓,向下渐次沉降,但底色本身(--bg-deep)
+       已经是带色相的深底,不会沉到纯中性灰——保证卡片下半段依然在同一氛围里 */
+    background: linear-gradient(180deg,
+      var(--bg-hi) 0%, var(--bg-mid) 40%, var(--bg-deep) 78%, var(--bg-deep) 100%);
+    color: var(--ink-0);
+  }
+
+  /* 细噪点,纸感 */
+  .grain {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.14;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
+
+  /* ---------- 头版:竖排中文 × Didot 巨字 × 主体 ---------- */
+  .header {
+    position: relative;
+    z-index: 1;
+    height: 560px;
+    margin-bottom: 8px;
+  }
+
+  /* 主体背后一枚极淡的主题色圆,唯一的大面积用色 */
+  .tint {
+    position: absolute;
+    top: 60px; left: 50%;
+    width: 500px; height: 500px;
+    transform: translateX(-44%);
+    border-radius: 50%;
+    background: radial-gradient(closest-side,
+      color-mix(in srgb, var(--accent) 26%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 10%, transparent) 55%,
+      transparent 100%);
+  }
+
+  .ghost {
+    position: absolute;
+    top: 30px; right: -20px;
+    font-family: var(--didot);
+    font-style: italic;
+    font-size: 188px;
+    line-height: 1;
+    letter-spacing: 6px;
+    white-space: nowrap;
+    color: var(--ghost-ink);
+  }
+
+  .title-v {
+    position: absolute;
+    top: 34px; left: 6px;
+    writing-mode: vertical-rl;
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: 100px;
+    line-height: 1.06;
+    letter-spacing: 14px;
+    color: var(--ink-0);
+  }
+  /* 标题旁一根主题色细线,竖排的注脚 */
+  .title-v::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: -18px;
+    width: 2px; height: 92%;
+    background: var(--accent);
+  }
+
+  .hero-slot {
+    position: absolute;
+    bottom: 6px; left: 55%;
+    transform: translateX(-50%);
+    width: 470px; height: 470px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  /* 展台:一道细椭圆线,画廊底座,替代发光。
+     主体经 cutout.py 紧裁后底对齐到 slot 底边,椭圆中线即主体基线 */
+  .hero-slot::after {
+    content: '';
+    position: absolute;
+    left: 50%; bottom: -32px;
+    width: 340px; height: 78px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    border: 1px solid var(--ring);
+  }
+  .hero-photo {
+    position: relative;
+    z-index: 1;
+    width: 470px;
+    height: 470px;
+    object-fit: contain;
+    /* 底对齐:紧裁素材的底边即主体基线 */
+    object-position: 50% 100%;
+    filter: drop-shadow(0 22px 26px rgba(0, 0, 0, 0.55));
+  }
+  .hero-emoji {
+    position: relative;
+    z-index: 1;
+    font-size: 230px;
+    line-height: 1;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.5));
+  }
+
+  .meta {
+    position: absolute;
+    left: 2px; bottom: 10px;
+    max-width: 300px;
+  }
+  .meta .cat {
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: 4px;
+    color: color-mix(in srgb, var(--accent) 14%, rgb(247 244 239 / 0.66));
+    margin-bottom: 12px;
+  }
+  .meta .rule {
+    width: 44px; height: 1px;
+    background: var(--accent);
+    margin-bottom: 12px;
+  }
+  .meta .latin {
+    font-family: var(--didot);
+    font-style: italic;
+    font-size: 21px;
+    letter-spacing: 3px;
+    color: var(--ink-1);
+  }
+
+  /* ---------- 章节 ---------- */
+  .grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 56px;
+  }
+  .section {
+    grid-column: span 1;
+    border-top: 1px solid var(--line);
+    padding: 22px 0 26px;
+  }
+  .section.span-full { grid-column: 1 / -1; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .sec-no {
+    font-family: var(--didot);
+    font-style: italic;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .sec-title {
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: 25px;
+    letter-spacing: 3px;
+    color: var(--ink-0);
+  }
+
+  /* style: list */
+  .list-items { display: flex; flex-direction: column; gap: 11px; }
+  .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 17.5px;
+    line-height: 1.58;
+    font-weight: 400;
+    color: var(--ink-1);
+  }
+  .list-item::before {
+    content: '';
+    flex: none;
+    width: 14px; height: 1px;
+    margin-top: 14px;
+    background: var(--accent);
+  }
+
+  /* style: tags — 斜杠分隔的一行宋体,不做胶囊 */
+  .tag-items {
+    font-family: var(--serif-cn);
+    font-size: 19px;
+    letter-spacing: 2px;
+    line-height: 2.1;
+    color: var(--ink-1);
+  }
+  .tag-items .sep {
+    color: var(--accent);
+    margin: 0 13px;
+    font-family: var(--didot);
+    font-style: italic;
+  }
+
+  /* style: metric */
+  .metric-items { display: flex; flex-direction: column; }
+  .metric-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 120px;
+    align-items: center;
+    gap: 24px;
+    padding: 11px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 14%, rgba(245, 242, 237, 0.09));
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label {
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    color: var(--ink-1);
+  }
+  .metric-track {
+    position: relative;
+    height: 1px;
+    background: var(--track);
+  }
+  .metric-fill {
+    position: absolute;
+    left: 0; top: -1px;
+    height: 3px;
+    background: var(--accent);
+  }
+  .metric-value {
+    font-family: var(--didot);
+    font-size: 23px;
+    letter-spacing: 1px;
+    text-align: right;
+    color: var(--ink-0);
+  }
+
+  /* style: text — 引文式 */
+  .block-text {
+    position: relative;
+    font-family: var(--serif-cn);
+    font-size: 19px;
+    line-height: 1.9;
+    color: var(--ink-1);
+    padding-left: 22px;
+    border-left: 2px solid var(--accent);
+  }
+
+  /* ---------- 尾部 ---------- */
+  .footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--line);
+    padding-top: 22px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .footer .brand {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 6px;
+    color: var(--ink-2);
+  }
+  .footer .latin {
+    font-family: var(--didot);
+    font-style: italic;
+    font-size: 15px;
+    letter-spacing: 2px;
+    color: var(--ink-2);
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="grain"></div>
+
+  <div class="header">
+    <div class="tint"></div>
+    <div class="ghost" id="ghost"></div>
+    <div class="title-v" id="title-v"></div>
+    <div class="hero-slot" id="hero-slot"></div>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer">
+    <span class="brand">KNOWLEDGE CARD</span>
+    <span class="latin" id="footer-latin"></span>
+  </div>
+</div>
+
+<script>
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  function renderBlockBody(block) {
+    const style = block.style || 'list';
+    const items = block.items || [];
+    if (style === 'list') {
+      return `<div class="list-items">${items.map(t =>
+        `<div class="list-item">${esc(t)}</div>`).join('')}</div>`;
+    }
+    if (style === 'tags') {
+      return `<div class="tag-items">${items.map(esc).join('<span class="sep">/</span>')}</div>`;
+    }
+    if (style === 'metric') {
+      return `<div class="metric-items">${items.map(it => {
+        const pct = Math.max(0, Math.min(100, Number(it.percent ?? 0)));
+        return `<div class="metric-row">
+          <span class="metric-label">${esc(it.label)}</span>
+          <span class="metric-track"><span class="metric-fill" style="width:${pct}%"></span></span>
+          <span class="metric-value">${esc(it.value ?? '')}</span>
+        </div>`;
+      }).join('')}</div>`;
+    }
+    if (style === 'text') {
+      return `<div class="block-text">${esc(block.text)}</div>`;
+    }
+    return '';
+  }
+
+  /**
+   * data = {
+   *   emoji, name, nameEn, category, themeColor,
+   *   hero,                 // 可选:图片 URI(render.py 会把相对路径转成 file:// URI)
+   *   blocks: [
+   *     { icon, title, style: 'list'|'tags'|'metric'|'text', span?: 'full',
+   *       items?: [...], text?: '...' }
+   *   ]
+   * }
+   * 注:icon 字段保留兼容,当前版式不展示(用衬线章节编号取代)。
+   */
+  /* ---- 配对基色推导 ---------------------------------------------------
+     取主体色的互补色相,压到极低饱和 + 极低明度,得到一档"带冷暖倾向的
+     高级黑"。主体色与底色互补时对比最强,主体最跳;若底色沿用主体色相,
+     主体会淹没在同色背景里。 */
+  function hexToHue(hex) {
+    const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(hex).trim());
+    if (!m) return null;
+    const [r, g, b] = m.slice(1).map(v => parseInt(v, 16) / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    if (!d) return 0;
+    let h;
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return ((h * 60) % 360 + 360) % 360;
+  }
+
+  function hslHex(h, s, l) {
+    const f = n => {
+      const k = (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+      return Math.round(c * 255).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
+
+  function applyPalette(accent) {
+    const root = document.documentElement;
+    root.style.setProperty('--accent', accent);
+    const hue = hexToHue(accent);
+    if (hue === null) return;
+    const c = (hue + 180) % 360;   // 互补色相
+    root.style.setProperty('--bg-floor', hslHex(c, 0.32, 0.032));
+    root.style.setProperty('--bg-deep', hslHex(c, 0.30, 0.052));
+    root.style.setProperty('--bg-mid', hslHex(c, 0.27, 0.076));
+    root.style.setProperty('--bg-hi', hslHex(c, 0.24, 0.112));
+  }
+
+  function renderCard(data) {
+    if (data.themeColor) {
+      applyPalette(data.themeColor);
+    }
+
+    const latin = (data.nameEn || '').toUpperCase();
+    document.getElementById('ghost').textContent = latin || (data.name || '');
+    document.getElementById('title-v').textContent = data.name || '';
+    document.getElementById('footer-latin').textContent = latin;
+
+    document.getElementById('meta').innerHTML =
+      (data.category ? `<div class="cat">${esc(data.category)}</div>` : '')
+      + `<div class="rule"></div>`
+      + (latin ? `<div class="latin">${esc(latin)}</div>` : '');
+
+    const heroSlot = document.getElementById('hero-slot');
+    if (data.hero) {
+      heroSlot.innerHTML = `<img class="hero-photo" src="${data.hero}">`;
+    } else {
+      heroSlot.innerHTML = `<div class="hero-emoji">${esc(data.emoji || '')}</div>`;
+    }
+
+    document.getElementById('grid').innerHTML = (data.blocks || []).map((block, i) => `
+      <div class="section${block.span === 'full' ? ' span-full' : ''}">
+        <div class="sec-head">
+          <span class="sec-no">${String(i + 1).padStart(2, '0')}</span>
+          <span class="sec-title">${esc(block.title || '')}</span>
+        </div>
+        ${renderBlockBody(block)}
+      </div>`).join('');
+  }
+
+  window.renderCard = renderCard;
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# 说明:cards/*/ 下的 hero.png、hero-cut.png、output.png 均纳入版本管理。
+# output.png 看似是产物,但模板依赖 macOS 系统字体(Songti SC / Didot),
+# 换平台渲染结果不一致,因此产物需要留档而非忽略。
