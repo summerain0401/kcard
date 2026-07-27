@@ -17,7 +17,8 @@ python scripts/render.py production/food-encyclopedia/cards/tomato            # 
 ```
 
 > ⚠️ **字体依赖**:风格使用 macOS 系统字体(Songti SC / Didot / PingFang SC)。
-> 在 Linux/Windows 上渲染会 fallback 到其他字体,版式效果与设计稿不一致。
+> 本项目按 macOS 单机渲染设计,不追求跨平台一致;在 Linux/Windows 上会
+> fallback 到其他字体,版式效果与设计稿不一致。
 
 ## 目录结构
 
@@ -40,13 +41,25 @@ production/<group>/      # 一个目录 = 一个生产组(生产部所有)
 scripts/
   render.py              # 渲染脚本,读 profile 定位风格与搭配
   cutout.py              # 主图去底(中性背景键出为 alpha)
+  batch.py               # 按生产组批量产卡,共享单浏览器实例
+  style-check.py         # 组上线闸门:参数取值域 + 跨维不变式校验
+  regress.py             # 改风格后,对在用该风格的组重渲染做像素 diff
+  gallery.py             # 从各风格的 STYLE.md/space.json/presets 生成 design/GALLERY.md
 ```
 
 ```bash
-# 生产渲染
+# 生产渲染(单卡)
 python scripts/render.py production/food-encyclopedia/cards/tomato
+# 按组批量产卡
+python scripts/batch.py production/food-encyclopedia
+# 组上线前的闸门校验
+python scripts/style-check.py production/food-encyclopedia
 # 风格自证预览(不碰 production/)
 python scripts/render.py --style editorial-mono --preset airy
+# 改动某套风格后,确认不破坏所有在用该风格的组(默认只检查不写)
+python scripts/regress.py editorial-mono
+# 更新选型看板
+python scripts/gallery.py
 ```
 
 生产组的卡片本身不声明使用哪套风格,由同组 `profile.json` 的 `style` / `preset`
@@ -54,20 +67,10 @@ python scripts/render.py --style editorial-mono --preset airy
 一律报错——未声明即不可调,需向设计部提案扩展。
 风格之间完全隔离,新增风格不影响既有风格。字段详见对应风格的 `schema.md`。
 
-## 设计原则
+## 风格与生产组
 
-**配色**:底色不用主体色,用与主体色相配的色。主体色和底色同色系时主体会淹没在
-背景里;黑配红之所以高级,是因为对比让主体色达到最强视觉冲击。所以取主体色的
-**互补色相**压成极深近黑作底(番茄红→青黑、香蕉金→蓝黑、葡萄紫→橄榄黑),
-主体色只保留在章节编号、指标线等细节上做呼应。整套配色由 `themeColor` 自动推导,
-`themeColor` 留空时由 `render.py` 从 hero 图提取。
+每套风格有自己的设计原则、构成要素与禁则,不再有"全项目统一"的规则——
+两套风格甚至气质相反(一深色一浅色)。选型与现状看 `design/GALLERY.md`,
+某套风格的具体规则看它自己的 `styles/<name>/STYLE.md`。
 
-**版式**:编辑排版风(竖排宋体大标题 + Didot 衬线巨字 + 细线章节 + 衬线编号),
-不用 emoji 图标、不用玻璃拟态与发光效果。
-
-## 现有卡片
-
-西红柿 · 香蕉 · 苹果 · 橙子 · 葡萄
-
-其中苹果/橙子/葡萄暂用 emoji 作主视觉,待补真实主图素材
-(生图 prompt 模板见 `design/styles/editorial-mono/schema.md`)。
+现有生产组见 `production/` 目录,各组的选题范围与口吻规范见其 `brief.md`。

@@ -222,19 +222,27 @@ def resolve_style_assets(style_name, layout_name, source_desc):
     return engine_path, layout_path
 
 
+def render_on_page(browser, engine_path, layout_path, data, params, out_path):
+    """在已有的 browser 实例上开一个新页渲染。batch.py 批量产卡时复用同一个
+    browser 调用本函数,免去每张卡各起一次 Chromium 进程的开销。"""
+    page = browser.new_page(viewport=VIEWPORT, device_scale_factor=DEVICE_SCALE_FACTOR)
+    page.goto(engine_path.as_uri())
+    # 骨架 CSS 在引擎样式之后注入,同优先级下后者生效
+    page.add_style_tag(path=str(layout_path))
+    page.evaluate("document.fonts.ready")
+    page.evaluate("({data, params}) => renderCard(data, params)",
+                  {"data": data, "params": params})
+    page.evaluate("document.fonts.ready")
+    page.screenshot(path=str(out_path), full_page=True)
+    page.close()
+
+
 def render_page(engine_path, layout_path, data, params, out_path):
-    """加载引擎 → 注入骨架 CSS → 注入数据与参数 → 全页截图。"""
+    """加载引擎 → 注入骨架 CSS → 注入数据与参数 → 全页截图。
+    单卡渲染用,自行管理 browser 生命周期(用完即关)。"""
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport=VIEWPORT, device_scale_factor=DEVICE_SCALE_FACTOR)
-        page.goto(engine_path.as_uri())
-        # 骨架 CSS 在引擎样式之后注入,同优先级下后者生效
-        page.add_style_tag(path=str(layout_path))
-        page.evaluate("document.fonts.ready")
-        page.evaluate("({data, params}) => renderCard(data, params)",
-                      {"data": data, "params": params})
-        page.evaluate("document.fonts.ready")
-        page.screenshot(path=str(out_path), full_page=True)
+        render_on_page(browser, engine_path, layout_path, data, params, out_path)
         browser.close()
 
 
@@ -272,8 +280,13 @@ def run_preview(args):
     print(f"已渲染风格预览({preset_name} / {layout_name}) -> {out_path}")
 
 
-def run_card(args):
-    card_dir = Path(args.card_dir).resolve()
+def resolve_card(card_dir):
+    """加载 <card_dir> 对应的 profile/preset/card.json,解析出渲染所需的一切,
+    但不动手渲染。batch.py / regress.py 需要在遍历多张卡时复用这一步,
+    单卡渲染的 run_card() 也走这个函数,两条路径不重复实现。
+
+    返回 (engine_path, layout_path, data, params, out_path)。
+    """
     card_json_path = card_dir / "card.json"
     group_dir = card_dir.parent.parent
     profile_path = group_dir / "profile.json"
@@ -325,6 +338,12 @@ def run_card(args):
             print(f"主题色取自主图 -> {accent}")
 
     out_path = card_dir / "output.png"
+    return engine_path, layout_path, data, params, out_path
+
+
+def run_card(args):
+    card_dir = Path(args.card_dir).resolve()
+    engine_path, layout_path, data, params, out_path = resolve_card(card_dir)
     render_page(engine_path, layout_path, data, params, out_path)
     print(f"已渲染知识卡片 -> {out_path}")
 
