@@ -181,8 +181,8 @@
       "why": "宪法 H3:accent 不得大面积使用"
     },
     {
-      "rule": "contrast(ink0(palette.inkTint), bgFloor(palette.bgLightnessFloor)) >= 4.5",
-      "why": "宪法 H9:正文可读性底线"
+      "rule": "contrast(ink0(palette.inkTint), bgFloor(palette.bgSaturation[0], palette.bgLightness[0])) >= 4.5",
+      "why": "宪法 H9:正文可读性底线。accent 常为 null(每卡自动取色),故 style-check.py 对全色相环采样取最差值校验,不是校验某个固定色"
     },
     {
       "rule": "material.grainOpacity > 0.20 => type.bodySize >= 17",
