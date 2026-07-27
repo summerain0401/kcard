@@ -56,28 +56,44 @@
 
     --p-sans: 'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif;
     --p-latin: 'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif;
-    --p-title-size: 76px;
-    --p-title-tracking: -1px;
+    --p-title-size: 84px;
+    --p-title-tracking: -2px;
     --p-title-weight: 600;
-    --p-subtitle-size: 17px;
-    --p-sec-title-size: 19px;
-    --p-body-size: 16px;
+    --p-subtitle-size: 22px;
+    --p-sec-title-size: 30px;
+    --p-body-size: 28px;
     --p-body-leading: 1.7;
-    --p-label-size: 12px;
-    --p-label-tracking: 2.4px;
+    --p-label-size: 18px;
+    --p-label-tracking: 3px;
 
-    --p-grid-cols: 1fr 1fr;
+    --p-grid-cols: 1fr;
     --p-column-gap: 44px;
-    --p-pad-top: 56px;
-    --p-pad-x: 52px;
-    --p-pad-bottom: 44px;
+    --p-pad-top: 64px;
+    --p-pad-x: 60px;
+    --p-pad-bottom: 52px;
     --p-header-height: 500px;
     --p-hero-size: 400px;
     --p-density: 1;
-    --p-rail-size: 44px;
+    --p-rail-size: 56px;
 
     --p-chip-opacity: 0.10;
-    --p-chip-radius: 12px;
+    --p-chip-radius: 16px;
+  }
+
+  /* 章节区的全部间距都锚定到 --p-body-size,不写 px 常量。
+     理由:成品是 1080px 宽的图,在手机上铺满屏幕时会被缩到约 36%——
+     按桌面网页习惯定的 16px 正文到手机上只剩 6pt,不足该有字号的三分之一。
+     字号因此需要整体上调,而间距若写死成 px,一调字号版面比例立刻散架。
+     锚定之后,改 type.bodySize 版面会自动等比呼吸。
+     各系数 = 16px 正文时代的原始 px 值 ÷ 16,故换算前后的版面比例完全一致。 */
+  .stage {
+    --sp-sec-top:     calc(var(--p-body-size) * 1.5    * var(--p-density));
+    --sp-sec-bottom:  calc(var(--p-body-size) * 1.375  * var(--p-density));
+    --sp-sec-head:    calc(var(--p-body-size) * 0.875  * var(--p-density));
+    --sp-row-gap:     calc(var(--p-body-size) * 0.5625 * var(--p-density));
+    --sp-metric-gap:  calc(var(--p-body-size) * 0.8125 * var(--p-density));
+    --sp-inline-gap:  calc(var(--p-body-size) * 0.75);
+    --sp-dot:         calc(var(--p-body-size) * 0.3125);
   }
 
   /* 派生色必须在 .stage 声明,不能挪回 :root(见文件头注释) */
@@ -233,7 +249,8 @@
     border: 1px solid var(--hairline);
     background: var(--chip-fill);
     font-family: var(--p-latin);
-    font-size: calc(var(--p-rail-size) * 0.34);
+    /* 0.40 而非更小的比例:导航片里的编号也是字,同样要扛住手机上 36% 的缩放 */
+    font-size: calc(var(--p-rail-size) * 0.4);
     letter-spacing: 0.5px;
     color: var(--ink-2);
   }
@@ -251,7 +268,7 @@
   }
   .section {
     grid-column: span 1;
-    padding: calc(24px * var(--p-density)) 0 calc(22px * var(--p-density));
+    padding: var(--sp-sec-top) 0 var(--sp-sec-bottom);
     border-top: 1px solid var(--hairline);
   }
   .section.span-full { grid-column: 1 / -1; }
@@ -259,8 +276,8 @@
   .sec-head {
     display: flex;
     align-items: baseline;
-    gap: 11px;
-    margin-bottom: calc(14px * var(--p-density));
+    gap: calc(var(--p-body-size) * 0.6875);
+    margin-bottom: var(--sp-sec-head);
   }
   .sec-no {
     font-family: var(--p-latin);
@@ -277,11 +294,11 @@
   }
 
   /* style: list —— 小圆点起首,点是 accent 的第二处露面 */
-  .list-items { display: flex; flex-direction: column; gap: calc(9px * var(--p-density)); }
+  .list-items { display: flex; flex-direction: column; gap: var(--sp-row-gap); }
   .list-item {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--sp-inline-gap);
     font-size: var(--p-body-size);
     line-height: var(--p-body-leading);
     color: var(--ink);
@@ -289,18 +306,18 @@
   .list-item::before {
     content: '';
     flex: none;
-    width: 5px;
-    height: 5px;
+    width: var(--sp-dot);
+    height: var(--sp-dot);
     border-radius: 50%;
     background: var(--p-accent);
     /* 对齐到首行文字的视觉中线,而不是顶端 */
-    margin-top: calc(var(--p-body-size) * var(--p-body-leading) / 2 - 2.5px);
+    margin-top: calc(var(--p-body-size) * var(--p-body-leading) / 2 - var(--sp-dot) / 2);
   }
 
   /* style: tags —— 玻璃胶囊(E6)。恒为全圆角,不吃 chip.radius */
-  .tag-items { display: flex; flex-wrap: wrap; gap: calc(9px * var(--p-density)); }
+  .tag-items { display: flex; flex-wrap: wrap; gap: var(--sp-row-gap); }
   .tag {
-    padding: 7px 17px;
+    padding: calc(var(--p-body-size) * 0.4375) calc(var(--p-body-size) * 1.0625);
     border-radius: 999px;
     border: 1px solid var(--hairline);
     background: var(--chip-fill);
@@ -310,8 +327,8 @@
   }
 
   /* style: metric —— 玻璃槽 + accent 填充(accent 的第三处露面) */
-  .metric-items { display: flex; flex-direction: column; gap: calc(13px * var(--p-density)); }
-  .metric-row { display: flex; flex-direction: column; gap: 7px; }
+  .metric-items { display: flex; flex-direction: column; gap: var(--sp-metric-gap); }
+  .metric-row { display: flex; flex-direction: column; gap: calc(var(--p-body-size) * 0.4375); }
   .metric-head {
     display: flex;
     align-items: baseline;
@@ -325,7 +342,7 @@
     letter-spacing: 0.5px;
   }
   .metric-track {
-    height: 6px;
+    height: calc(var(--p-body-size) * 0.375);
     border-radius: 999px;
     background: var(--chip-fill);
     overflow: hidden;
@@ -334,7 +351,7 @@
 
   /* style: text —— 引文自成一块小玻璃(E6),不用竖线也不用引号 */
   .block-text {
-    padding: calc(20px * var(--p-density)) 24px;
+    padding: calc(var(--p-body-size) * 1.25 * var(--p-density)) calc(var(--p-body-size) * 1.5);
     border-radius: var(--p-chip-radius);
     background: var(--chip-fill);
     font-size: calc(var(--p-body-size) * 1.06);
@@ -344,8 +361,8 @@
 
   /* ---------- 页脚 ---------- */
   .footer {
-    margin-top: calc(12px * var(--p-density));
-    padding-top: calc(16px * var(--p-density));
+    margin-top: calc(var(--p-body-size) * 0.75 * var(--p-density));
+    padding-top: calc(var(--p-body-size) * 1.0 * var(--p-density));
     border-top: 1px solid var(--hairline);
     display: flex;
     align-items: center;
@@ -355,11 +372,11 @@
     letter-spacing: var(--p-label-tracking);
     color: var(--ink-2);
   }
-  .footer-mark { display: flex; align-items: center; gap: 9px; }
+  .footer-mark { display: flex; align-items: center; gap: var(--sp-row-gap); }
   /* accent 的第四处、也是最后一处露面 */
   .footer-mark .dot {
-    width: 6px;
-    height: 6px;
+    width: calc(var(--p-body-size) * 0.375);
+    height: calc(var(--p-body-size) * 0.375);
     border-radius: 50%;
     background: var(--p-accent);
   }

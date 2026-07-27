@@ -84,7 +84,7 @@
 | 名称 | 说明 | 预览 |
 |---|---|---|
 | `ember` · 余烬 · 正统 | aurora-glass 的基准搭配。暖橙主色斑压左上、邻近色压右下、一颗近白自右上探入,暖炭玻璃面板居中承载全部文字。参数全部取 space.json 的 default,是其余搭配的起点。 | [ember.png](styles/aurora-glass/preview/ember.png) |
-| `mist` · 雾岚 · 疏朗 | 把硬边色斑推到 120px 模糊,配冷蓝玻璃与更松的行距——光源退成一片雾,画面从产品页转向清晨的窗。面板更透、内缩更深,让色斑有更多露脸的余地。适合气质安静、信息量不大的选题。 | [mist.png](styles/aurora-glass/preview/mist.png) |
+| `mist` · 雾岚 · 疏朗 | 把硬边色斑推到 120px 模糊,配冷蓝玻璃——光源退成一片雾,画面从产品页转向清晨的窗。面板更透、内缩更深,让色斑有更多露脸的余地。b 骨架把主体与文字竖着摞成一列,故三套里它最长,选题信息量要相应压到 3 章以内。 | [mist.png](styles/aurora-glass/preview/mist.png) |
 | `onyx` · 玄石 · 极简 | 只留两团色斑——一团主色、一团近白,面板压到 0.9 不透明度并加大模糊撑住玻璃感。标题加粗到 700 且字距收到 -2,是三套里最紧、最暗、accent 面积最小的一版。适合需要压住场面的严肃选题。 | [onyx.png](styles/aurora-glass/preview/onyx.png) |
 
 ---

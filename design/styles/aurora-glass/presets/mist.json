@@ -1,17 +1,37 @@
 {
   "name": "mist",
   "displayName": "雾岚 · 疏朗",
-  "description": "把硬边色斑推到 120px 模糊,配冷蓝玻璃与更松的行距——光源退成一片雾,画面从产品页转向清晨的窗。面板更透、内缩更深,让色斑有更多露脸的余地。适合气质安静、信息量不大的选题。",
+  "description": "把硬边色斑推到 120px 模糊,配冷蓝玻璃——光源退成一片雾,画面从产品页转向清晨的窗。面板更透、内缩更深,让色斑有更多露脸的余地。b 骨架把主体与文字竖着摞成一列,故三套里它最长,选题信息量要相应压到 3 章以内。",
   "layout": "b-panel-center",
   "params": {
     "scrim.hue": 210,
     "scrim.saturation": 0.14,
     "scrim.lightness": 0.1,
     "orb.count": 3,
-    "orb.hueShifts": [0, -34, 150, 60],
-    "orb.saturations": [0.62, 0.55, 0.06, 0.48],
-    "orb.lightnesses": [0.62, 0.56, 0.94, 0.5],
-    "orb.sizes": [800, 700, 620, 460],
+    "orb.hueShifts": [
+      0,
+      -34,
+      150,
+      60
+    ],
+    "orb.saturations": [
+      0.62,
+      0.55,
+      0.06,
+      0.48
+    ],
+    "orb.lightnesses": [
+      0.62,
+      0.56,
+      0.94,
+      0.5
+    ],
+    "orb.sizes": [
+      800,
+      700,
+      620,
+      460
+    ],
     "orb.blur": 120,
     "orb.opacity": 0.7,
     "glass.hue": 214,
@@ -33,23 +53,27 @@
     "palette.accent": null,
     "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
     "type.latin": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
-    "type.titleSize": 68,
-    "type.titleTracking": -0.5,
+    "type.titleSize": 80,
+    "type.titleTracking": -1,
     "type.titleWeight": 500,
-    "type.subtitleSize": 16,
-    "type.secTitleSize": 18,
-    "type.bodySize": 16,
-    "type.bodyLeading": 1.78,
-    "type.labelSize": 12,
-    "type.labelTracking": 3,
-    "layout.columns": 2,
+    "type.subtitleSize": 21,
+    "type.secTitleSize": 29,
+    "type.bodySize": 28,
+    "type.bodyLeading": 1.7,
+    "type.labelSize": 18,
+    "type.labelTracking": 3.5,
+    "layout.columns": 1,
     "layout.columnGap": 52,
-    "layout.panelPadding": [64, 58, 50],
-    "layout.headerHeight": 620,
-    "layout.heroSize": 400,
-    "layout.density": 1.12,
-    "layout.railSize": 40,
+    "layout.panelPadding": [
+      64,
+      60,
+      52
+    ],
+    "layout.headerHeight": 570,
+    "layout.heroSize": 360,
+    "layout.density": 1.0,
+    "layout.railSize": 52,
     "chip.opacity": 0.12,
-    "chip.radius": 14
+    "chip.radius": 18
   }
 }

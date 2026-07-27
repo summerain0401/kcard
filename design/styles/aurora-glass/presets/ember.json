@@ -8,10 +8,30 @@
     "scrim.saturation": 0.1,
     "scrim.lightness": 0.085,
     "orb.count": 3,
-    "orb.hueShifts": [0, -18, -150, 92],
-    "orb.saturations": [0.92, 0.86, 0.04, 0.7],
-    "orb.lightnesses": [0.54, 0.6, 0.96, 0.46],
-    "orb.sizes": [760, 560, 480, 380],
+    "orb.hueShifts": [
+      0,
+      -18,
+      -150,
+      92
+    ],
+    "orb.saturations": [
+      0.92,
+      0.86,
+      0.04,
+      0.7
+    ],
+    "orb.lightnesses": [
+      0.54,
+      0.6,
+      0.96,
+      0.46
+    ],
+    "orb.sizes": [
+      760,
+      560,
+      480,
+      380
+    ],
     "orb.blur": 0,
     "orb.opacity": 0.85,
     "glass.hue": 18,
@@ -33,23 +53,27 @@
     "palette.accent": null,
     "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
     "type.latin": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
-    "type.titleSize": 76,
-    "type.titleTracking": -1,
+    "type.titleSize": 84,
+    "type.titleTracking": -2,
     "type.titleWeight": 600,
-    "type.subtitleSize": 17,
-    "type.secTitleSize": 19,
-    "type.bodySize": 16,
+    "type.subtitleSize": 22,
+    "type.secTitleSize": 30,
+    "type.bodySize": 28,
     "type.bodyLeading": 1.7,
-    "type.labelSize": 12,
-    "type.labelTracking": 2.4,
-    "layout.columns": 2,
+    "type.labelSize": 18,
+    "type.labelTracking": 3,
+    "layout.columns": 1,
     "layout.columnGap": 44,
-    "layout.panelPadding": [56, 52, 44],
-    "layout.headerHeight": 500,
-    "layout.heroSize": 400,
+    "layout.panelPadding": [
+      64,
+      60,
+      52
+    ],
+    "layout.headerHeight": 420,
+    "layout.heroSize": 340,
     "layout.density": 1.0,
-    "layout.railSize": 44,
+    "layout.railSize": 56,
     "chip.opacity": 0.1,
-    "chip.radius": 12
+    "chip.radius": 16
   }
 }
