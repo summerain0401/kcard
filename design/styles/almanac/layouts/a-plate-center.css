@@ -1,0 +1,44 @@
+/* a-plate-center — 经典图版:标题居上,标本居中,引线标签左右分列
+ *
+ * almanac 的基准骨架,最接近十九世纪图鉴的正统版式:
+ * 标题与拉丁名占据顶部,标本端正地摆在图版中央,
+ * 引线标签自左右两侧水平指向标本。
+ * 适用:形态完整、值得端详的主体;需要标注多个部位的选题。
+ *
+ * 骨架只负责图版区四个元素的定位,外观(字体/字号/颜色/线宽)来自 engine.html。
+ */
+
+.plate-title {
+  top: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.plate-sub {
+  top: calc(var(--p-title-size) * 1.34);
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+
+/* 标本抬离图版下缘:基线会自标本底部再向下探出 specimenSize×18/400,
+   贴太近会与图版下方的双线分隔挤成两道平行线,读起来像重复的分隔。 */
+.specimen {
+  bottom: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 引线标签区退到标题组之下,避免覆盖标题 */
+.annotations {
+  top: calc(var(--p-title-size) * 2.1);
+  bottom: 0;
+}
+
+/* 引线端点必须贴住标本边缘,否则圆点悬在半空、失去指示感。
+   标本在哪只有骨架知道,故水平定位由骨架给出而非引擎——
+   这里让每条标签的外端锚定到标本边缘再压进 12px。
+   随 --p-specimen-size 自动适配,生产组放大标本时无需改骨架。 */
+.anno.left  { right: calc(50% + var(--p-specimen-size) / 2 - 12px); }
+.anno.right { left:  calc(50% + var(--p-specimen-size) / 2 - 12px); }

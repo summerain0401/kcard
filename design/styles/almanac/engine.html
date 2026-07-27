@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>almanac engine</title>
+<!--
+  almanac 参数化渲染引擎(博物图鉴风)
+
+  与 editorial-mono 的关系:同一套 data 契约、同一套 render.py 编排,
+  但配色模型、版式语汇、结构元素完全独立,不共享任何 CSS。
+    editorial-mono  深色底 + accent 互补色推导 + 竖排宋体 + 展台椭圆
+    almanac         纸色底 + 纸墨双直参 + 横排衬线 + 引线标签 + 双线分隔
+
+  本文件只含「风格通用」的外观与结构。图版区四个元素
+  (.plate-title / .plate-sub / .specimen / .annotations)
+  的**定位不在这里**,由 layouts/<name>.css 完整定义,render.py 渲染时注入。
+
+  所有可调值以 --p-* 自定义属性表达,:root 里的默认值等于 space.json 的 default,
+  由 applyParams() 按传入 params 覆写。
+
+  ⚠ 与 editorial-mono 同一个坑:派生色(--ink / --ink-2 / --rule-color 等)
+    必须声明在 .sheet 而非 :root——var() 在声明处求值,写在 :root 会永远
+    按默认值计算,导致换色不生效。
+-->
+<style>
+  :root {
+    /* ---------- 参数默认值(= space.json 的 default) ---------- */
+    --p-paper-hue: 42;
+    /* 饱和度略高于"看起来该有的值":grain 用 multiply 混合会吸掉一部分彩度,
+       按 14% 调出来的纸在成图里会退成中性灰,踩过一次(违反宪法 H1)。 */
+    --p-paper-sat: 19%;
+    --p-paper-light: 90.5%;
+    --p-grain-opacity: 0.18;
+    --p-vignette: 0.06;
+
+    --p-ink-hue: 28;
+    --p-ink-sat: 22%;
+    --p-ink-light: 16%;
+    --p-ink-light-2: 38%;
+
+    --p-accent: #9C3B24;
+
+    --p-serif-cn: 'Songti SC', 'STSong', 'Noto Serif CJK SC', serif;
+    --p-serif-latin: 'Baskerville', 'PT Serif', 'Georgia', serif;
+    --p-title-size: 64px;
+    --p-title-tracking: 2px;
+    --p-subtitle-size: 20px;
+    --p-numeral-size: 22px;
+    --p-sec-title-size: 24px;
+    --p-body-size: 17px;
+    --p-body-leading: 1.62;
+    --p-label-size: 14px;
+
+    --p-grid-cols: 1fr 1fr;
+    --p-column-gap: 52px;
+    --p-pad-top: 72px;
+    --p-pad-x: 72px;
+    --p-pad-bottom: 56px;
+    --p-header-height: 520px;
+    --p-specimen-size: 400px;
+    --p-density: 1;
+
+    --p-rule-thick: 2px;
+    --p-rule-thin: 1px;
+    --p-rule-gap: 3px;
+
+    --p-anno-line: 1px;
+    --p-anno-dot: 4px;
+    --p-anno-reach: 132px;
+
+    --p-baseline-width: 260px;
+    --p-baseline-weight: 1px;
+  }
+
+  /* 派生色必须在 .sheet 声明,不能挪回 :root(见文件头注释) */
+  .sheet {
+    --paper: hsl(var(--p-paper-hue) var(--p-paper-sat) var(--p-paper-light));
+    --ink: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light));
+    --ink-2: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light-2));
+    /* 线条不用纯墨色,掺纸色压淡,才像印上去的而不是贴上去的 */
+    --rule-color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+    --hairline: color-mix(in srgb, var(--ink) 38%, var(--paper));
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    background: hsl(var(--p-paper-hue) var(--p-paper-sat) var(--p-paper-light));
+    font-family: var(--p-serif-cn);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    position: relative;
+    width: 1080px;
+    padding: var(--p-pad-top) var(--p-pad-x) var(--p-pad-bottom);
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  /* 纸纹:分形噪声用 multiply 压进纸里,不是浮在上面 */
+  .grain {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--p-grain-opacity);
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+  }
+
+  /* 四边暗角:印刷品的压痕与老化 */
+  .vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(120% 100% at 50% 45%,
+      transparent 55%,
+      color-mix(in srgb, var(--ink) calc(var(--p-vignette) * 100%), transparent) 100%);
+  }
+
+  /* ---------- 图版区:外观在此,定位由 layouts/*.css 提供 ---------- */
+  .plate {
+    position: relative;
+    z-index: 1;
+    height: var(--p-header-height);
+  }
+
+  .plate-title {
+    position: absolute;
+    font-family: var(--p-serif-cn);
+    font-weight: 700;
+    font-size: var(--p-title-size);
+    letter-spacing: var(--p-title-tracking);
+    line-height: 1.12;
+    color: var(--ink);
+  }
+
+  .plate-sub {
+    position: absolute;
+    font-family: var(--p-serif-latin);
+    font-style: italic;
+    font-size: var(--p-subtitle-size);
+    letter-spacing: 1px;
+    color: var(--ink-2);
+  }
+  .plate-sub .cat {
+    font-family: var(--p-serif-cn);
+    font-style: normal;
+    letter-spacing: 3px;
+    margin-right: 14px;
+  }
+
+  /* 标本:居中展示,下方一道基线代替展台 */
+  .specimen {
+    position: absolute;
+    width: var(--p-specimen-size);
+    height: var(--p-specimen-size);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .specimen::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--p-specimen-size) * -18 / 400);
+    width: var(--p-baseline-width);
+    height: var(--p-baseline-weight);
+    transform: translateX(-50%);
+    background: var(--rule-color);
+  }
+  .specimen-photo {
+    position: relative;
+    z-index: 1;
+    width: var(--p-specimen-size);
+    height: var(--p-specimen-size);
+    object-fit: contain;
+    object-position: 50% 100%;
+    /* 宪法 H5:平面印刷品,禁投影 */
+  }
+  .specimen-emoji {
+    position: relative;
+    z-index: 1;
+    font-size: calc(var(--p-specimen-size) * 200 / 400);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  /* 引线标签:本风格的标志性元素(E5)。
+     位置由骨架给出,这里只负责一条标签自身的构造。 */
+  .annotations {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .anno {
+    position: absolute;
+    /* 默认用侧内均分(左右分列的骨架);把两侧合并到同一边的骨架
+       须覆写为 var(--t-all),否则标签会叠印。 */
+    top: var(--t-side);
+    display: flex;
+    align-items: center;
+    font-family: var(--p-serif-cn);
+    font-size: var(--p-label-size);
+    letter-spacing: 1px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .anno .dot {
+    flex: none;
+    width: var(--p-anno-dot);
+    height: var(--p-anno-dot);
+    border-radius: 50%;   /* 宪法 H4 唯一豁免处 */
+    background: var(--p-accent);
+  }
+  .anno .lead {
+    flex: none;
+    width: var(--p-anno-reach);
+    height: var(--p-anno-line);
+    background: var(--hairline);
+  }
+  .anno .text { flex: none; }
+  /* 左侧标签:文字在左,引线向右指向标本 */
+  .anno.left { flex-direction: row; }
+  .anno.left .text { margin-right: 10px; text-align: right; }
+  /* 右侧标签:镜像 */
+  .anno.right { flex-direction: row-reverse; }
+  .anno.right .text { margin-left: 10px; text-align: left; }
+
+  /* ---------- 双线分隔(E7) ---------- */
+  .rule-double {
+    position: relative;
+    z-index: 1;
+    border-top: var(--p-rule-thick) solid var(--rule-color);
+    padding-top: var(--p-rule-gap);
+  }
+  .rule-double::before {
+    content: '';
+    display: block;
+    height: var(--p-rule-thin);
+    background: var(--rule-color);
+  }
+
+  /* ---------- 章节 ---------- */
+  .grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: var(--p-grid-cols);
+    column-gap: var(--p-column-gap);
+  }
+  .section {
+    grid-column: span 1;
+    padding: calc(26px * var(--p-density)) 0 calc(24px * var(--p-density));
+    border-top: var(--p-rule-thin) solid var(--hairline);
+  }
+  .section.span-full { grid-column: 1 / -1; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: calc(16px * var(--p-density));
+  }
+  /* 罗马编号(E6) */
+  .sec-no {
+    font-family: var(--p-serif-latin);
+    font-size: var(--p-numeral-size);
+    line-height: 1;
+    letter-spacing: 1px;
+    color: var(--p-accent);
+  }
+  .sec-title {
+    font-family: var(--p-serif-cn);
+    font-weight: 700;
+    font-size: var(--p-sec-title-size);
+    letter-spacing: 2px;
+    color: var(--ink);
+  }
+
+  /* style: list —— 图鉴的条目用破折号起首,不用圆点 */
+  .list-items { display: flex; flex-direction: column; gap: calc(10px * var(--p-density)); }
+  .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: var(--p-body-size);
+    line-height: var(--p-body-leading);
+    color: var(--ink);
+  }
+  .list-item::before {
+    content: '—';
+    flex: none;
+    color: var(--p-accent);
+    font-family: var(--p-serif-latin);
+  }
+
+  /* style: tags —— 中点分隔的一行,不做胶囊(宪法 H4) */
+  .tag-items {
+    font-family: var(--p-serif-cn);
+    font-size: calc(var(--p-body-size) * 18 / 17);
+    letter-spacing: 2px;
+    line-height: 2;
+    color: var(--ink);
+  }
+  .tag-items .sep {
+    color: var(--p-accent);
+    margin: 0 12px;
+  }
+
+  /* style: metric —— 图鉴的量表用点线连接,像目录页 */
+  .metric-items { display: flex; flex-direction: column; }
+  .metric-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 10px;
+    padding: calc(9px * var(--p-density)) 0;
+    font-size: var(--p-body-size);
+  }
+  .metric-label { color: var(--ink); letter-spacing: 1px; }
+  /* 点线引导 + 实线填充叠在同一条基线上:一行即读完「项目——比例——数值」,
+     不另起一行画条。图鉴的量表本就长在目录页的引导点线上。 */
+  .metric-dots {
+    position: relative;
+    border-bottom: 1px dotted var(--hairline);
+    transform: translateY(-4px);
+  }
+  .metric-dots span {
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--p-accent);
+  }
+  .metric-value {
+    font-family: var(--p-serif-latin);
+    color: var(--ink);
+    letter-spacing: 0.5px;
+  }
+
+  /* style: text —— 引文用左侧竖线 */
+  .block-text {
+    font-family: var(--p-serif-cn);
+    font-size: calc(var(--p-body-size) * 18 / 17);
+    line-height: 1.85;
+    color: var(--ink);
+    padding-left: 20px;
+    border-left: var(--p-rule-thick) solid var(--p-accent);
+  }
+
+  /* ---------- 页脚学名行(E8) ---------- */
+  .colophon {
+    position: relative;
+    z-index: 1;
+    margin-top: calc(10px * var(--p-density));
+    padding-top: calc(14px * var(--p-density));
+    border-top: var(--p-rule-thin) solid var(--hairline);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-family: var(--p-serif-latin);
+    font-size: var(--p-label-size);
+    letter-spacing: 2px;
+    color: var(--ink-2);
+  }
+  .colophon .latin { font-style: italic; }
+  .colophon .folio { letter-spacing: 3px; }
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet">
+  <div class="grain"></div>
+  <div class="vignette"></div>
+
+  <div class="plate">
+    <div class="plate-title" id="plate-title"></div>
+    <div class="plate-sub" id="plate-sub"></div>
+    <div class="specimen" id="specimen"></div>
+    <div class="annotations" id="annotations"></div>
+  </div>
+
+  <div class="rule-double"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="colophon">
+    <span class="latin" id="colophon-latin"></span>
+    <span class="folio">ALMANAC</span>
+  </div>
+</div>
+
+<script>
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  /* 浮点收敛:0.14*100 在 JS 里可能是 14.000000000000002,直接拼进 CSS 会带长尾 */
+  function n(v) { return String(+(+v).toFixed(4)); }
+  function pct(v) { return n(v * 100) + '%'; }
+  function px(v) { return n(v) + 'px'; }
+
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X',
+                 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
+  function roman(i) { return ROMAN[i] || String(i + 1); }
+
+  /* accent 压到图鉴的朴素范围。render.py 已按 space.json 的 accentExtraction
+     输出域取过色,这里只做兜底钳制,防止直接调用时传进明快色违反宪法 H2。 */
+  function hexToHsv(hex) {
+    const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(hex).trim());
+    if (!m) return null;
+    const [r, g, b] = m.slice(1).map(v => parseInt(v, 16) / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    let h = 0;
+    if (d) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+    }
+    return [((h * 60) % 360 + 360) % 360, max ? d / max : 0, max];
+  }
+
+  function hsvHex(h, s, v) {
+    const f = k0 => {
+      const k = (k0 + h / 60) % 6;
+      const c = v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+      return Math.round(c * 255).toString(16).padStart(2, '0');
+    };
+    return `#${f(5)}${f(3)}${f(1)}`;
+  }
+
+  const ACCENT_SAT_MAX = 0.60;   // 宪法 H2
+  const ACCENT_VAL_MAX = 0.65;
+
+  function temperAccent(hex) {
+    const hsv = hexToHsv(hex);
+    if (!hsv) return hex;
+    const [h, s, v] = hsv;
+    if (s <= ACCENT_SAT_MAX && v <= ACCENT_VAL_MAX) return hex;
+    return hsvHex(h, Math.min(s, ACCENT_SAT_MAX), Math.min(v, ACCENT_VAL_MAX));
+  }
+
+  function applyParams(params) {
+    const root = document.documentElement;
+    const set = (k, v) => root.style.setProperty(k, v);
+    const has = k => params[k] !== undefined && params[k] !== null;
+
+    if (has('paper.hue'))          set('--p-paper-hue', n(params['paper.hue']));
+    if (has('paper.saturation'))   set('--p-paper-sat', pct(params['paper.saturation']));
+    if (has('paper.lightness'))    set('--p-paper-light', pct(params['paper.lightness']));
+    if (has('paper.grainOpacity')) set('--p-grain-opacity', n(params['paper.grainOpacity']));
+    if (has('paper.vignette'))     set('--p-vignette', n(params['paper.vignette']));
+
+    if (has('ink.hue'))                 set('--p-ink-hue', n(params['ink.hue']));
+    if (has('ink.saturation'))          set('--p-ink-sat', pct(params['ink.saturation']));
+    if (has('ink.lightness'))           set('--p-ink-light', pct(params['ink.lightness']));
+    if (has('ink.secondaryLightness'))  set('--p-ink-light-2', pct(params['ink.secondaryLightness']));
+
+    if (has('type.serifCN'))       set('--p-serif-cn', params['type.serifCN']);
+    if (has('type.serifLatin'))    set('--p-serif-latin', params['type.serifLatin']);
+    if (has('type.titleSize'))     set('--p-title-size', px(params['type.titleSize']));
+    if (has('type.titleTracking')) set('--p-title-tracking', px(params['type.titleTracking']));
+    if (has('type.subtitleSize'))  set('--p-subtitle-size', px(params['type.subtitleSize']));
+    if (has('type.numeralSize'))   set('--p-numeral-size', px(params['type.numeralSize']));
+    if (has('type.secTitleSize'))  set('--p-sec-title-size', px(params['type.secTitleSize']));
+    if (has('type.bodySize'))      set('--p-body-size', px(params['type.bodySize']));
+    if (has('type.bodyLeading'))   set('--p-body-leading', n(params['type.bodyLeading']));
+    if (has('type.labelSize'))     set('--p-label-size', px(params['type.labelSize']));
+
+    if (has('layout.columnGap'))    set('--p-column-gap', px(params['layout.columnGap']));
+    if (has('layout.headerHeight')) set('--p-header-height', px(params['layout.headerHeight']));
+    if (has('layout.specimenSize')) set('--p-specimen-size', px(params['layout.specimenSize']));
+    if (has('layout.density'))      set('--p-density', n(params['layout.density']));
+    if (has('layout.columns')) {
+      set('--p-grid-cols', Number(params['layout.columns']) === 1 ? '1fr' : '1fr 1fr');
+    }
+    if (has('layout.pagePadding')) {
+      const [t, x, b] = params['layout.pagePadding'];
+      set('--p-pad-top', px(t)); set('--p-pad-x', px(x)); set('--p-pad-bottom', px(b));
+    }
+
+    if (has('rule.thickWeight')) set('--p-rule-thick', px(params['rule.thickWeight']));
+    if (has('rule.thinWeight'))  set('--p-rule-thin', px(params['rule.thinWeight']));
+    if (has('rule.gap'))         set('--p-rule-gap', px(params['rule.gap']));
+
+    if (has('annotation.lineWidth')) set('--p-anno-line', px(params['annotation.lineWidth']));
+    if (has('annotation.dotSize'))   set('--p-anno-dot', px(params['annotation.dotSize']));
+    if (has('annotation.reach'))     set('--p-anno-reach', px(params['annotation.reach']));
+
+    if (has('specimen.baselineWidth'))  set('--p-baseline-width', px(params['specimen.baselineWidth']));
+    if (has('specimen.baselineWeight')) set('--p-baseline-weight', px(params['specimen.baselineWeight']));
+  }
+
+  function renderBlockBody(block) {
+    const style = block.style || 'list';
+    const items = block.items || [];
+    if (style === 'list') {
+      return `<div class="list-items">${items.map(t =>
+        `<div class="list-item"><span>${esc(t)}</span></div>`).join('')}</div>`;
+    }
+    if (style === 'tags') {
+      return `<div class="tag-items">${items.map(esc).join('<span class="sep">·</span>')}</div>`;
+    }
+    if (style === 'metric') {
+      return `<div class="metric-items">${items.map(it => {
+        const p = Math.max(0, Math.min(100, Number(it.percent ?? 0)));
+        return `<div class="metric-row">
+          <span class="metric-label">${esc(it.label)}</span>
+          <span class="metric-dots"><span style="width:${p}%"></span></span>
+          <span class="metric-value">${esc(it.value ?? '')}</span>
+        </div>`;
+      }).join('')}</div>`;
+    }
+    if (style === 'text') {
+      return `<div class="block-text">${esc(block.text)}</div>`;
+    }
+    return '';
+  }
+
+  /* 引线标签:数据只给文字与左右侧,纵向位置由本函数按侧内序号均分。
+     不让数据提供坐标——坐标交给 AI 填不可靠,也会把版式决策泄漏到内容层。 */
+  function renderAnnotations(labels) {
+    const box = document.getElementById('annotations');
+    if (!Array.isArray(labels) || !labels.length) { box.innerHTML = ''; return; }
+
+    const capped = labels.slice(0, 4);
+    const bySide = { left: [], right: [] };
+    capped.forEach(l => bySide[l.side === 'right' ? 'right' : 'left'].push(l));
+
+    /* 引擎只算两套候选纵向位置,由骨架挑用,不替骨架决定:
+         --t-side  侧内均分(30%~70%),左右分列的骨架用,两侧对称好看
+         --t-all   全局均分(20%~80%),把两侧合并到同一边的骨架必须用它,
+                   否则两侧标签的侧内序号相同,会叠印成一团(骨架 c 踩过)
+       水平定位同样交给骨架——引线端点要贴住标本边缘,标本在哪只有骨架知道。 */
+    const spread = (i, n, lo, hi) =>
+      n === 1 ? (lo + hi) / 2 : lo + ((hi - lo) * i) / (n - 1);
+
+    let html = '';
+    let gi = 0;
+    for (const side of ['left', 'right']) {
+      const list = bySide[side];
+      list.forEach((label, i) => {
+        const tSide = spread(i, list.length, 0.30, 0.70);
+        const tAll = spread(gi, capped.length, 0.20, 0.80);
+        gi += 1;
+        html += `<div class="anno ${side}" style="` +
+          `--t-side:${(tSide * 100).toFixed(2)}%;` +
+          `--t-all:${(tAll * 100).toFixed(2)}%">
+          <span class="text">${esc(label.text)}</span>
+          <span class="lead"></span>
+          <span class="dot"></span>
+        </div>`;
+      });
+    }
+    box.innerHTML = html;
+  }
+
+  /**
+   * data   = { emoji, name, nameEn, category, themeColor, hero, blocks: [...],
+   *            specimenLabels?: [{text, side}] }
+   *          字段说明见同目录 schema.md。
+   * params = space.json 的点分键名 → 值。缺省时用 :root 里的默认值。
+   */
+  function renderCard(data, params) {
+    params = params || {};
+    applyParams(params);
+
+    const rawAccent = params['accent'] || data.themeColor;
+    if (rawAccent) {
+      document.documentElement.style.setProperty('--p-accent', temperAccent(rawAccent));
+    }
+
+    const latin = (data.nameEn || '').toUpperCase();
+    document.getElementById('plate-title').textContent = data.name || '';
+    document.getElementById('plate-sub').innerHTML =
+      (data.category ? `<span class="cat">${esc(data.category)}</span>` : '')
+      + (data.nameEn ? esc(data.nameEn) : '');
+    document.getElementById('colophon-latin').textContent = latin;
+
+    const specimen = document.getElementById('specimen');
+    if (data.hero) {
+      specimen.innerHTML = `<img class="specimen-photo" src="${data.hero}">`;
+    } else {
+      specimen.innerHTML = `<div class="specimen-emoji">${esc(data.emoji || '')}</div>`;
+    }
+
+    renderAnnotations(data.specimenLabels);
+
+    document.getElementById('grid').innerHTML = (data.blocks || []).map((block, i) => `
+      <div class="section${block.span === 'full' ? ' span-full' : ''}">
+        <div class="sec-head">
+          <span class="sec-no">${roman(i)}.</span>
+          <span class="sec-title">${esc(block.title || '')}</span>
+        </div>
+        ${renderBlockBody(block)}
+      </div>`).join('');
+  }
+
+  window.renderCard = renderCard;
+</script>
+</body>
+</html>

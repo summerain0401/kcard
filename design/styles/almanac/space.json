@@ -1,0 +1,383 @@
+{
+  "style": "almanac",
+  "version": "1.0.0",
+  "status": "初版",
+  "note": [
+    "本文件声明生产组可自由组合的参数及其取值域。宪法(不可违反的构成要素与禁则)见 STYLE.md。",
+    "range 为初版设定,待实际产卡后按经验收紧,届时升 minor 版本。",
+    "scope=production 的维度生产组可自由填写;scope=design 属风格内部实现,生产组不可覆写。",
+    "本风格是「纸底 + 墨字」配色模型:纸色与墨色都是直接参数,不像 editorial-mono 需要由 accent 反推底色。因此可读性用 contrastHSL() 直接计算,无需色相环采样。",
+    "accentExtraction 的输出域被刻意压低(饱和<=0.60、明度<=0.65)以满足宪法 H2——图鉴用赭石朱砂而非明快色。这正是「不同风格对什么算主体色的判断不同」的体现。"
+  ],
+  "params": {
+    "paper.hue": {
+      "default": 42,
+      "range": [
+        25,
+        55
+      ],
+      "scope": "production",
+      "why": "纸色色相。必须落在暖色区间(宪法 H1),偏低偏红像旧宣纸,偏高偏黄像牛皮纸"
+    },
+    "paper.saturation": {
+      "default": 0.19,
+      "range": [
+        0.04,
+        0.22
+      ],
+      "scope": "production",
+      "why": "纸色饱和度。过低会退成中性灰(违反 H1),过高会显脏"
+    },
+    "paper.lightness": {
+      "default": 0.905,
+      "range": [
+        0.86,
+        0.95
+      ],
+      "scope": "production",
+      "why": "纸色明度。下限 0.86 是宪法 H7(不得滑向深色),上限 0.95 是 H1(不得接近纯白)"
+    },
+    "paper.grainOpacity": {
+      "default": 0.18,
+      "range": [
+        0,
+        0.35
+      ],
+      "scope": "production",
+      "why": "纸纹肌理强度。0 即光面纸,过高会显廉价"
+    },
+    "paper.vignette": {
+      "default": 0.06,
+      "range": [
+        0,
+        0.15
+      ],
+      "scope": "production",
+      "why": "纸张四边的轻微暗角,模拟印刷品的压痕与老化。0 即全新纸"
+    },
+    "ink.hue": {
+      "default": 28,
+      "range": [
+        0,
+        60
+      ],
+      "scope": "production",
+      "why": "主墨色色相。图鉴墨色多偏暖褐,纯黑会显得像激光打印"
+    },
+    "ink.saturation": {
+      "default": 0.22,
+      "range": [
+        0.05,
+        0.4
+      ],
+      "scope": "production",
+      "why": "主墨色饱和度。带一点色偏才有铜版印刷的味道"
+    },
+    "ink.lightness": {
+      "default": 0.16,
+      "range": [
+        0.1,
+        0.32
+      ],
+      "scope": "production",
+      "why": "主墨色明度。正文与标题用色"
+    },
+    "ink.secondaryLightness": {
+      "default": 0.38,
+      "range": [
+        0.25,
+        0.55
+      ],
+      "scope": "production",
+      "why": "次级文字明度(元信息、标签、页脚)。必须浅于主墨色,否则层级反转"
+    },
+    "accent": {
+      "default": null,
+      "type": "hex",
+      "scope": "production",
+      "why": "组级固定点缀色(如 \"#9C3B24\" 朱砂)。留空则每张卡从 hero 图取色,并按 accentExtraction 压到图鉴的朴素范围。用于罗马编号、引线端点、少量强调"
+    },
+    "type.serifCN": {
+      "default": "'Songti SC', 'STSong', 'Noto Serif CJK SC', serif",
+      "scope": "production",
+      "constraint": "必须为衬线/宋体族(宪法 H3)",
+      "why": "中文标题与正文字体栈"
+    },
+    "type.serifLatin": {
+      "default": "'Baskerville', 'PT Serif', 'Georgia', serif",
+      "scope": "production",
+      "constraint": "必须为衬线族(宪法 H3)",
+      "why": "拉丁文、罗马编号、学名字体栈"
+    },
+    "type.titleSize": {
+      "default": 64,
+      "range": [
+        44,
+        88
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "横排主标题字号"
+    },
+    "type.titleTracking": {
+      "default": 2,
+      "range": [
+        0,
+        8
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "主标题字距。横排衬线不宜过松"
+    },
+    "type.subtitleSize": {
+      "default": 20,
+      "range": [
+        15,
+        28
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "副标题(拉丁名/分类)字号"
+    },
+    "type.numeralSize": {
+      "default": 22,
+      "range": [
+        16,
+        30
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "罗马数字章节编号字号"
+    },
+    "type.secTitleSize": {
+      "default": 24,
+      "range": [
+        18,
+        32
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "章节标题字号"
+    },
+    "type.bodySize": {
+      "default": 17,
+      "range": [
+        14,
+        20
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "正文字号"
+    },
+    "type.bodyLeading": {
+      "default": 1.62,
+      "range": [
+        1.4,
+        1.95
+      ],
+      "scope": "production",
+      "why": "正文行高倍数"
+    },
+    "type.labelSize": {
+      "default": 14,
+      "range": [
+        11,
+        18
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "引线标签字号。图鉴标注字应明显小于正文"
+    },
+    "layout.columns": {
+      "default": 2,
+      "values": [
+        1,
+        2
+      ],
+      "scope": "production",
+      "why": "章节网格栏数。span:full 的块始终占满整行"
+    },
+    "layout.columnGap": {
+      "default": 52,
+      "range": [
+        32,
+        88
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "两栏间距。columns=1 时此值无效"
+    },
+    "layout.pagePadding": {
+      "default": [
+        72,
+        72,
+        56
+      ],
+      "range": [
+        40,
+        100
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "画布内边距 [上, 左右, 下]。图版需要比常规版式更宽的页边"
+    },
+    "layout.headerHeight": {
+      "default": 520,
+      "range": [
+        420,
+        660
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "图版区高度"
+    },
+    "layout.specimenSize": {
+      "default": 400,
+      "range": [
+        300,
+        500
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "标本(主体图)展示尺寸。须给引线标签留出左右空间,故比 editorial-mono 的主体略小"
+    },
+    "layout.density": {
+      "default": 1.0,
+      "range": [
+        0.8,
+        1.3
+      ],
+      "scope": "production",
+      "why": "章节内行距与块间距的统一缩放系数"
+    },
+    "rule.thickWeight": {
+      "default": 2,
+      "range": [
+        1,
+        4
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "双线分隔中粗线的线宽(宪法 E7)"
+    },
+    "rule.thinWeight": {
+      "default": 1,
+      "range": [
+        1,
+        2
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "双线分隔中细线的线宽"
+    },
+    "rule.gap": {
+      "default": 3,
+      "range": [
+        2,
+        8
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "双线之间的间距"
+    },
+    "annotation.lineWidth": {
+      "default": 1,
+      "range": [
+        1,
+        2
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "引线线宽。加粗会失去图鉴标注的纤细感"
+    },
+    "annotation.dotSize": {
+      "default": 4,
+      "range": [
+        2,
+        7
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "引线端点圆点直径。这是本风格唯一允许出现圆角的地方(宪法 H4)"
+    },
+    "annotation.reach": {
+      "default": 132,
+      "range": [
+        80,
+        200
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "引线自标本边缘水平延伸的长度"
+    },
+    "specimen.baselineWidth": {
+      "default": 260,
+      "range": [
+        160,
+        400
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "标本下方基线的长度,代替 editorial-mono 的展台椭圆"
+    },
+    "specimen.baselineWeight": {
+      "default": 1,
+      "range": [
+        1,
+        3
+      ],
+      "unit": "px",
+      "scope": "production",
+      "why": "标本基线的线宽"
+    }
+  },
+  "accentExtraction": {
+    "scope": "design",
+    "why": "从 hero 图提取点缀色的判定参数。输出域被刻意压低以满足宪法 H2——图鉴用赭石、朱砂、墨绿这类沉稳色,不用明快色。这与 editorial-mono 的高饱和高明度输出形成对照。",
+    "sampleSize": 256,
+    "alphaMin": 153,
+    "satMin": 70,
+    "valMin": 50,
+    "minPixels": 64,
+    "hueBins": 36,
+    "hueSpread": 1,
+    "outSatRange": [
+      0.35,
+      0.6
+    ],
+    "outValRange": [
+      0.4,
+      0.65
+    ]
+  },
+  "invariants": [
+    {
+      "rule": "contrastHSL(ink.hue, ink.saturation, ink.lightness, paper.hue, paper.saturation, paper.lightness) >= 4.5",
+      "why": "宪法 H8:正文可读性底线。纸色与墨色都是直接参数,可精确计算,无需采样"
+    },
+    {
+      "rule": "contrastHSL(ink.hue, ink.saturation, ink.secondaryLightness, paper.hue, paper.saturation, paper.lightness) >= 3.0",
+      "why": "次级文字(元信息、引线标签、页脚)也须可读。要求低于正文,因其字号小但非长文阅读"
+    },
+    {
+      "rule": "paper.lightness - ink.lightness >= 0.5",
+      "why": "墨必须显著深于纸。仅靠 contrast 比值不足以防住「浅墨配暗纸」这种整体灰蒙蒙的版面"
+    },
+    {
+      "rule": "ink.secondaryLightness > ink.lightness",
+      "why": "次级文字必须浅于主文字,否则视觉层级反转"
+    },
+    {
+      "rule": "rule.thickWeight > rule.thinWeight",
+      "why": "宪法 E7:双线分隔必须一粗一细,等宽就不成其为双线"
+    },
+    {
+      "rule": "paper.grainOpacity > 0.25 => type.bodySize >= 16",
+      "why": "纸纹偏重时小字会被肌理吃掉,可读性下降"
+    },
+    {
+      "rule": "annotation.reach >= layout.specimenSize * 0.25",
+      "why": "引线过短则标签贴在标本上,失去图鉴标注的指示感"
+    }
+  ]
+}

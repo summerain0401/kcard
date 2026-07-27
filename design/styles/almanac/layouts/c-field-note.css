@@ -1,0 +1,54 @@
+/* c-field-note — 田野笔记:标题压顶偏左,标本偏置右下,留白在左上
+ *
+ * 不同于 a/b 的端正对称,本骨架刻意把标本推向右下角、标题压在左上,
+ * 形成对角构图与大片留白,像速写本上随手记录的一页。
+ * 引线标签集中在标本左侧,指向斜上方的空白区。
+ * 适用:希望松弛、手记感的选题;主体形态不规整时也更容易安排。
+ *
+ * 骨架只负责图版区四个元素的定位,外观来自 engine.html。
+ */
+
+.plate-title {
+  top: 6px;
+  left: 0;
+  width: 62%;
+  text-align: left;
+}
+
+.plate-sub {
+  top: calc(var(--p-title-size) * 1.5);
+  left: 0;
+  width: 62%;
+  text-align: left;
+}
+
+/* 标本推到右下,略微出格给出速写的随意感。
+   bottom 须留出基线的下探量(specimenSize×18/400),否则基线会与
+   图版下方的双线分隔挤成两道平行线。 */
+.specimen {
+  right: -18px;
+  bottom: 52px;
+}
+
+/* 标签区避开左上的标题组,右边界收到标本左缘,让标签全部落在标本左侧 */
+.annotations {
+  top: calc(var(--p-title-size) * 2.4);
+  right: calc(var(--p-specimen-size) - 24px);
+  bottom: 0;
+}
+
+/* 标本在右下,两侧标签统一改为「圆点朝右」并右对齐到容器边缘,
+   即标本左缘。数据里的 side 在本骨架下不区分左右位置。
+   因两侧被合并到同一边,纵向必须改用全局均分——沿用侧内均分会让
+   左右两侧的同序号标签落在同一高度,叠印成一团。 */
+.anno.left,
+.anno.right {
+  top: var(--t-all);
+  right: 0;
+  flex-direction: row;
+}
+.anno.right .text {
+  margin-right: 10px;
+  margin-left: 0;
+  text-align: right;
+}

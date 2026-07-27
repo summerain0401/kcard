@@ -136,7 +136,10 @@ def tokenize(expr):
 class ExprParser:
     """递归下降,优先级从低到高: 蕴含 => 比较 => 加减 => 乘除 => 一元 => 函数/括号/字面量"""
 
-    FUNCS = {"min", "max", "isAscending"}
+    # contrastHSL 让任何"前景色与背景色都能直接表达成 HSL 参数"的风格
+    # 自行声明可读性约束,不必为每套配色模型在 Python 里加特例。
+    # (editorial-mono 的 contrast() 是例外:accent 常为 null,需色相环采样)
+    FUNCS = {"min", "max", "isAscending", "contrastHSL"}
 
     def __init__(self, tokens, params):
         self.tokens = tokens
@@ -238,6 +241,13 @@ class ExprParser:
             if not isinstance(arr, list):
                 raise ValueError("isAscending() 需要数组参数")
             return all(arr[i] <= arr[i + 1] for i in range(len(arr) - 1))
+        if name == "contrastHSL":
+            if len(args) != 6:
+                raise ValueError(
+                    "contrastHSL() 需要 6 个参数: h1,s1,l1,h2,s2,l2")
+            fg = _hsl_to_rgb(args[0], args[1], args[2])
+            bg = _hsl_to_rgb(args[3], args[4], args[5])
+            return _contrast_ratio(fg, bg)
 
 
 def eval_expr(rule, params):

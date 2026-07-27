@@ -1,0 +1,55 @@
+/* b-plate-left — 书籍插页:标本在左作插图,标题与说明在右
+ *
+ * 模拟博物学著作的图文对页——左半是插图版,右半是排版文字。
+ * 标题不再居中,而是左对齐落在右半栏顶部,拉丁名紧随其下。
+ * 引线标签收到标本左侧,避免与右侧文字打架。
+ * 适用:标题较长、或希望图文并重而非图为主的选题。
+ *
+ * 骨架只负责图版区四个元素的定位,外观来自 engine.html。
+ */
+
+/* 标本占左半,垂直居中 */
+.specimen {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+/* 标题组退到右半栏 */
+.plate-title {
+  top: 18%;
+  left: 52%;
+  right: 0;
+  width: auto;
+}
+
+.plate-sub {
+  top: calc(18% + var(--p-title-size) * 1.5);
+  left: 52%;
+  right: 0;
+  width: auto;
+}
+
+/* 标本贴左,标签无处安放在其左侧,故全部移到标本右缘外并统一改为
+   「圆点朝左」的形态——数据里的 side 表达的是部位在主体的哪一侧,
+   落到版面上如何摆是骨架的决定。标签区下移以避开右上的标题组。 */
+.annotations {
+  top: 45%;
+}
+/* 两侧合并到标本右缘,故纵向改用全局均分——沿用侧内均分会让左右两侧的
+   同序号标签落在同一高度而叠印。
+   ⚠ 选择器必须写成 .anno.left/.anno.right 双类:引擎里 .anno.left 是两个类
+   (特异性 0,2,0),单写 .anno (0,1,0) 覆盖不掉,会出现一半标签圆点朝右、
+   背离标本的错向。 */
+.anno.left,
+.anno.right {
+  top: var(--t-all);
+  left: calc(var(--p-specimen-size) + 10px);
+  flex-direction: row-reverse;
+}
+.anno.left .text,
+.anno.right .text {
+  margin-left: 10px;
+  margin-right: 0;
+  text-align: left;
+}
