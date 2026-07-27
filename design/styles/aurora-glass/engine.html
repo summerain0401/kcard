@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>aurora-glass engine</title>
+<!--
+  aurora-glass 参数化渲染引擎(暗色玻璃 + 硬边色斑)
+
+  与另两套风格的关系:同一套 data 契约、同一套 render.py 编排,
+  但配色模型、版式语汇、结构元素完全独立,不共享任何 CSS。
+    editorial-mono  深色底 + accent 互补色推导 + 竖排宋体 + 展台椭圆 + 无圆角
+    almanac         纸色底 + 纸墨双直参   + 横排衬线 + 引线标签 + 无圆角
+    aurora-glass    幕布/色斑/玻璃/墨四层 + 无衬线   + 玻璃元件 + 大圆角
+
+  本文件只含「风格通用」的外观与结构。头版区四个元素
+  (.hero-slot / .head-title / .head-sub / .chapter-rail)与色斑 .orb-N
+  的**定位不在这里**,由 layouts/<name>.css 完整定义,render.py 渲染时注入。
+  色斑位置尤其如此:构图是版式决策,引擎只算色斑的颜色与尺寸。
+
+  所有可调值以 --p-* 自定义属性表达,:root 里的默认值等于 space.json 的 default,
+  由 applyParams() 按传入 params 覆写。
+
+  ⚠ 与另两套风格同一个坑:派生色(--glass-fill / --chip-fill / --hairline 等)
+    必须声明在 .stage 而非 :root——var() 在声明处求值,写在 :root 会永远
+    按默认值计算,导致换色不生效。
+-->
+<style>
+  :root {
+    /* ---------- 参数默认值(= space.json 的 default) ---------- */
+    --p-scrim-hue: 14;
+    --p-scrim-sat: 10%;
+    --p-scrim-light: 8.5%;
+
+    --p-orb-blur: 0px;
+    --p-orb-opacity: 0.85;
+
+    --p-glass-hue: 18;
+    --p-glass-sat: 9%;
+    --p-glass-light: 13.5%;
+    --p-glass-opacity: 0.74;
+    --p-glass-blur: 44px;
+    --p-glass-radius: 30px;
+    --p-glass-edge: 0.16;
+    --p-glass-border: 0.14;
+    --p-glass-shadow-y: 30px;
+    --p-glass-shadow-blur: 70px;
+    --p-glass-shadow-alpha: 0.5;
+    --p-glass-inset: 46px;
+
+    --p-ink-hue: 18;
+    --p-ink-sat: 10%;
+    --p-ink-light: 95%;
+    --p-ink-light-2: 64%;
+
+    --p-accent: #E8913A;
+
+    --p-sans: 'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif;
+    --p-latin: 'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif;
+    --p-title-size: 76px;
+    --p-title-tracking: -1px;
+    --p-title-weight: 600;
+    --p-subtitle-size: 17px;
+    --p-sec-title-size: 19px;
+    --p-body-size: 16px;
+    --p-body-leading: 1.7;
+    --p-label-size: 12px;
+    --p-label-tracking: 2.4px;
+
+    --p-grid-cols: 1fr 1fr;
+    --p-column-gap: 44px;
+    --p-pad-top: 56px;
+    --p-pad-x: 52px;
+    --p-pad-bottom: 44px;
+    --p-header-height: 500px;
+    --p-hero-size: 400px;
+    --p-density: 1;
+    --p-rail-size: 44px;
+
+    --p-chip-opacity: 0.10;
+    --p-chip-radius: 12px;
+  }
+
+  /* 派生色必须在 .stage 声明,不能挪回 :root(见文件头注释) */
+  .stage {
+    --ink: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light));
+    --ink-2: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light-2));
+    /* 玻璃面板:半透明的深炭色,真正的"玻璃"来自其下的 backdrop-filter */
+    --glass-fill: hsl(var(--p-glass-hue) var(--p-glass-sat) var(--p-glass-light) / var(--p-glass-opacity));
+    /* 小元件不是另一种材质,是同一块玻璃更厚的一处:用墨色极低透明度提亮 */
+    --chip-fill: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / var(--p-chip-opacity));
+    --hairline: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / var(--p-glass-border));
+    --edge-light: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / var(--p-glass-edge));
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    background: hsl(var(--p-scrim-hue) var(--p-scrim-sat) var(--p-scrim-light));
+    font-family: var(--p-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage {
+    position: relative;
+    width: 1080px;
+    /* 色斑必须被画布边缘裁成弧形(宪法 E1),靠的就是这一句 */
+    overflow: hidden;
+    background: hsl(var(--p-scrim-hue) var(--p-scrim-sat) var(--p-scrim-light));
+  }
+
+  /* ---------- 色斑层:外观在此,定位由 layouts/*.css 提供 ---------- */
+  .orb-field {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .orb {
+    position: absolute;
+    width: var(--orb-size);
+    height: var(--orb-size);
+    border-radius: 50%;
+    background: var(--orb-color);
+    opacity: var(--p-orb-opacity);
+    filter: blur(var(--p-orb-blur));
+  }
+
+  /* ---------- 玻璃面板(E3) ---------- */
+  .panel {
+    position: relative;
+    z-index: 1;
+    margin: var(--p-glass-inset);
+    padding: var(--p-pad-top) var(--p-pad-x) var(--p-pad-bottom);
+    border-radius: var(--p-glass-radius);
+    border: 1px solid var(--hairline);
+    background: var(--glass-fill);
+    /* 宪法 H3:没有这一句就只是一块深色板,不是玻璃。
+       saturate 略提是为了让透上来的色晕不发灰,不是为了加"科技感"。 */
+    backdrop-filter: blur(var(--p-glass-blur)) saturate(1.18);
+    /* 宪法 H5:仅允许纯黑投影,不得带色、不得发光 */
+    box-shadow: 0 var(--p-glass-shadow-y) var(--p-glass-shadow-blur)
+                rgba(0, 0, 0, var(--p-glass-shadow-alpha));
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  /* 顶边高光(E4):玻璃厚度感的唯一来源。
+     是一道自左上渐隐的薄光,不是发光——渐变必须在 34% 内收干净,
+     拖长会变成"整块面板在亮",玻璃就塌成了塑料。 */
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(158deg, var(--edge-light) 0%, transparent 34%);
+  }
+  /* ::before 是定位元素,会盖住普通流内容,故内容层统一抬到 z-index:1 */
+  .head, .grid, .footer { position: relative; z-index: 1; }
+
+  /* ---------- 头版区:外观在此,定位由 layouts/*.css 提供 ---------- */
+  .head { height: var(--p-header-height); }
+
+  .head-title {
+    position: absolute;
+    font-family: var(--p-sans);
+    font-weight: var(--p-title-weight);
+    font-size: var(--p-title-size);
+    letter-spacing: var(--p-title-tracking);
+    line-height: 1.08;
+    color: var(--ink);
+  }
+
+  .head-sub {
+    position: absolute;
+    font-family: var(--p-latin);
+    font-size: var(--p-subtitle-size);
+    letter-spacing: 1.2px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .head-sub .cat {
+    font-family: var(--p-sans);
+    letter-spacing: 3px;
+    margin-right: 14px;
+  }
+
+  .hero-slot {
+    position: absolute;
+    width: var(--p-hero-size);
+    height: var(--p-hero-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* 纯黑投影,让主体浮在玻璃上而不是印在玻璃里(宪法 H5) */
+    filter: drop-shadow(0 calc(var(--p-glass-shadow-y) * 0.7)
+                          calc(var(--p-glass-shadow-blur) * 0.55)
+                          rgba(0, 0, 0, 0.55));
+  }
+  /* 字母印记(E7):无主图时的兜底,不退回 emoji(宪法 H8)。
+     极淡填充 + 细描边,读起来是版面上的一块材质,不是一个字。 */
+  .hero-mark {
+    font-family: var(--p-latin);
+    font-weight: 700;
+    font-size: calc(var(--p-hero-size) * 0.66);
+    line-height: 1;
+    letter-spacing: -0.05em;
+    color: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / 0.09);
+    -webkit-text-stroke: 1px hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / 0.22);
+  }
+
+  /* 章节导航片(E5):一列/一排小玻璃方片,方向由骨架给 flex-direction */
+  .chapter-rail {
+    position: absolute;
+    display: flex;
+    gap: calc(var(--p-rail-size) * 0.27);
+  }
+  .rail-cell {
+    width: var(--p-rail-size);
+    height: var(--p-rail-size);
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--p-chip-radius);
+    border: 1px solid var(--hairline);
+    background: var(--chip-fill);
+    font-family: var(--p-latin);
+    font-size: calc(var(--p-rail-size) * 0.34);
+    letter-spacing: 0.5px;
+    color: var(--ink-2);
+  }
+  /* 首片以 accent 描边:accent 在本风格只出现在四处,这是其一 */
+  .rail-cell.is-first {
+    border-color: var(--p-accent);
+    color: var(--ink);
+  }
+
+  /* ---------- 章节 ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: var(--p-grid-cols);
+    column-gap: var(--p-column-gap);
+  }
+  .section {
+    grid-column: span 1;
+    padding: calc(24px * var(--p-density)) 0 calc(22px * var(--p-density));
+    border-top: 1px solid var(--hairline);
+  }
+  .section.span-full { grid-column: 1 / -1; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+    margin-bottom: calc(14px * var(--p-density));
+  }
+  .sec-no {
+    font-family: var(--p-latin);
+    font-size: var(--p-label-size);
+    letter-spacing: var(--p-label-tracking);
+    color: var(--p-accent);
+  }
+  .sec-title {
+    font-family: var(--p-sans);
+    font-weight: 600;
+    font-size: var(--p-sec-title-size);
+    letter-spacing: 1px;
+    color: var(--ink);
+  }
+
+  /* style: list —— 小圆点起首,点是 accent 的第二处露面 */
+  .list-items { display: flex; flex-direction: column; gap: calc(9px * var(--p-density)); }
+  .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: var(--p-body-size);
+    line-height: var(--p-body-leading);
+    color: var(--ink);
+  }
+  .list-item::before {
+    content: '';
+    flex: none;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--p-accent);
+    /* 对齐到首行文字的视觉中线,而不是顶端 */
+    margin-top: calc(var(--p-body-size) * var(--p-body-leading) / 2 - 2.5px);
+  }
+
+  /* style: tags —— 玻璃胶囊(E6)。恒为全圆角,不吃 chip.radius */
+  .tag-items { display: flex; flex-wrap: wrap; gap: calc(9px * var(--p-density)); }
+  .tag {
+    padding: 7px 17px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: var(--chip-fill);
+    font-size: calc(var(--p-body-size) * 0.94);
+    letter-spacing: 1px;
+    color: var(--ink);
+  }
+
+  /* style: metric —— 玻璃槽 + accent 填充(accent 的第三处露面) */
+  .metric-items { display: flex; flex-direction: column; gap: calc(13px * var(--p-density)); }
+  .metric-row { display: flex; flex-direction: column; gap: 7px; }
+  .metric-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: var(--p-body-size);
+  }
+  .metric-label { color: var(--ink); letter-spacing: 1px; }
+  .metric-value {
+    font-family: var(--p-latin);
+    color: var(--ink-2);
+    letter-spacing: 0.5px;
+  }
+  .metric-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--chip-fill);
+    overflow: hidden;
+  }
+  .metric-fill { height: 100%; border-radius: 999px; background: var(--p-accent); }
+
+  /* style: text —— 引文自成一块小玻璃(E6),不用竖线也不用引号 */
+  .block-text {
+    padding: calc(20px * var(--p-density)) 24px;
+    border-radius: var(--p-chip-radius);
+    background: var(--chip-fill);
+    font-size: calc(var(--p-body-size) * 1.06);
+    line-height: 1.85;
+    color: var(--ink-2);
+  }
+
+  /* ---------- 页脚 ---------- */
+  .footer {
+    margin-top: calc(12px * var(--p-density));
+    padding-top: calc(16px * var(--p-density));
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--p-latin);
+    font-size: var(--p-label-size);
+    letter-spacing: var(--p-label-tracking);
+    color: var(--ink-2);
+  }
+  .footer-mark { display: flex; align-items: center; gap: 9px; }
+  /* accent 的第四处、也是最后一处露面 */
+  .footer-mark .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--p-accent);
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="orb-field" id="orb-field"></div>
+
+  <div class="panel">
+    <div class="head">
+      <div class="hero-slot" id="hero-slot"></div>
+      <div class="head-title" id="head-title"></div>
+      <div class="head-sub" id="head-sub"></div>
+      <div class="chapter-rail" id="chapter-rail"></div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="footer">
+      <span class="footer-latin" id="footer-latin"></span>
+      <span class="footer-mark"><i class="dot"></i>AURORA</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  /* 浮点收敛:0.14*100 在 JS 里可能是 14.000000000000002,直接拼进 CSS 会带长尾 */
+  function n(v) { return String(+(+v).toFixed(4)); }
+  function pct(v) { return n(v * 100) + '%'; }
+  function px(v) { return n(v) + 'px'; }
+
+  /* 色斑配方的引擎侧默认值,必须与 space.json 的 default 逐位一致——
+     两处不同步会让"不传参渲染"与"传 preset 渲染"出不同的图。 */
+  const ORB_DEFAULTS = {
+    count: 3,
+    hueShifts:   [0, -18, -150, 92],
+    saturations: [0.92, 0.86, 0.04, 0.70],
+    lightnesses: [0.54, 0.60, 0.96, 0.46],
+    sizes:       [760, 560, 480, 380],
+  };
+
+  function hexToHue(hex) {
+    const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(hex).trim());
+    if (!m) return null;
+    const [r, g, b] = m.slice(1).map(v => parseInt(v, 16) / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    if (!d) return 0;
+    let h;
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return ((h * 60) % 360 + 360) % 360;
+  }
+
+  function applyParams(params) {
+    const root = document.documentElement;
+    const set = (k, v) => root.style.setProperty(k, v);
+    const has = k => params[k] !== undefined && params[k] !== null;
+
+    if (has('scrim.hue'))        set('--p-scrim-hue', n(params['scrim.hue']));
+    if (has('scrim.saturation')) set('--p-scrim-sat', pct(params['scrim.saturation']));
+    if (has('scrim.lightness'))  set('--p-scrim-light', pct(params['scrim.lightness']));
+
+    if (has('orb.blur'))    set('--p-orb-blur', px(params['orb.blur']));
+    if (has('orb.opacity')) set('--p-orb-opacity', n(params['orb.opacity']));
+
+    if (has('glass.hue'))         set('--p-glass-hue', n(params['glass.hue']));
+    if (has('glass.saturation'))  set('--p-glass-sat', pct(params['glass.saturation']));
+    if (has('glass.lightness'))   set('--p-glass-light', pct(params['glass.lightness']));
+    if (has('glass.opacity'))     set('--p-glass-opacity', n(params['glass.opacity']));
+    if (has('glass.blur'))        set('--p-glass-blur', px(params['glass.blur']));
+    if (has('glass.radius'))      set('--p-glass-radius', px(params['glass.radius']));
+    if (has('glass.edgeLight'))   set('--p-glass-edge', n(params['glass.edgeLight']));
+    if (has('glass.borderAlpha')) set('--p-glass-border', n(params['glass.borderAlpha']));
+    if (has('glass.shadowY'))     set('--p-glass-shadow-y', px(params['glass.shadowY']));
+    if (has('glass.shadowBlur'))  set('--p-glass-shadow-blur', px(params['glass.shadowBlur']));
+    if (has('glass.shadowAlpha')) set('--p-glass-shadow-alpha', n(params['glass.shadowAlpha']));
+    if (has('glass.inset'))       set('--p-glass-inset', px(params['glass.inset']));
+
+    if (has('ink.hue'))                set('--p-ink-hue', n(params['ink.hue']));
+    if (has('ink.saturation'))         set('--p-ink-sat', pct(params['ink.saturation']));
+    if (has('ink.lightness'))          set('--p-ink-light', pct(params['ink.lightness']));
+    if (has('ink.secondaryLightness')) set('--p-ink-light-2', pct(params['ink.secondaryLightness']));
+
+    if (has('type.sans'))          set('--p-sans', params['type.sans']);
+    if (has('type.latin'))         set('--p-latin', params['type.latin']);
+    if (has('type.titleSize'))     set('--p-title-size', px(params['type.titleSize']));
+    if (has('type.titleTracking')) set('--p-title-tracking', px(params['type.titleTracking']));
+    if (has('type.titleWeight'))   set('--p-title-weight', n(params['type.titleWeight']));
+    if (has('type.subtitleSize'))  set('--p-subtitle-size', px(params['type.subtitleSize']));
+    if (has('type.secTitleSize'))  set('--p-sec-title-size', px(params['type.secTitleSize']));
+    if (has('type.bodySize'))      set('--p-body-size', px(params['type.bodySize']));
+    if (has('type.bodyLeading'))   set('--p-body-leading', n(params['type.bodyLeading']));
+    if (has('type.labelSize'))     set('--p-label-size', px(params['type.labelSize']));
+    if (has('type.labelTracking')) set('--p-label-tracking', px(params['type.labelTracking']));
+
+    if (has('layout.columnGap'))    set('--p-column-gap', px(params['layout.columnGap']));
+    if (has('layout.headerHeight')) set('--p-header-height', px(params['layout.headerHeight']));
+    if (has('layout.heroSize'))     set('--p-hero-size', px(params['layout.heroSize']));
+    if (has('layout.density'))      set('--p-density', n(params['layout.density']));
+    if (has('layout.railSize'))     set('--p-rail-size', px(params['layout.railSize']));
+    if (has('layout.columns')) {
+      set('--p-grid-cols', Number(params['layout.columns']) === 1 ? '1fr' : '1fr 1fr');
+    }
+    if (has('layout.panelPadding')) {
+      const [t, x, b] = params['layout.panelPadding'];
+      set('--p-pad-top', px(t)); set('--p-pad-x', px(x)); set('--p-pad-bottom', px(b));
+    }
+
+    if (has('chip.opacity')) set('--p-chip-opacity', n(params['chip.opacity']));
+    if (has('chip.radius'))  set('--p-chip-radius', px(params['chip.radius']));
+  }
+
+  /* 色斑:引擎只算颜色与尺寸,位置全部交给骨架的 .orb-1 … .orb-4。
+     色相由 accent 旋转推导——色斑就是主体色的光源化身,所以它必须跟着主体走;
+     饱和度与明度则是直接参数,因为"哪一颗是无彩的"(E2)是配方决策,不能从 accent 推。 */
+  function renderOrbs(params, accentHue) {
+    const field = document.getElementById('orb-field');
+    const pick = (key, fallback) => {
+      const v = params[key];
+      return Array.isArray(v) && v.length === 4 ? v : fallback;
+    };
+    const count = Number(params['orb.count'] ?? ORB_DEFAULTS.count);
+    const shifts = pick('orb.hueShifts', ORB_DEFAULTS.hueShifts);
+    const sats   = pick('orb.saturations', ORB_DEFAULTS.saturations);
+    const lights = pick('orb.lightnesses', ORB_DEFAULTS.lightnesses);
+    const sizes  = pick('orb.sizes', ORB_DEFAULTS.sizes);
+
+    let html = '';
+    for (let i = 0; i < Math.min(count, 4); i++) {
+      const hue = ((accentHue + shifts[i]) % 360 + 360) % 360;
+      const color = `hsl(${n(hue)} ${pct(sats[i])} ${pct(lights[i])})`;
+      html += `<div class="orb orb-${i + 1}" style="` +
+              `--orb-size:${px(sizes[i])};--orb-color:${color}"></div>`;
+    }
+    field.innerHTML = html;
+  }
+
+  /* 章节导航片(E5):片数 = 章节数,上限 6 片。
+     纯装饰但数据驱动——它反映的是这张卡真实的章节结构,不是随便摆几个方块。 */
+  function renderRail(blocks) {
+    const rail = document.getElementById('chapter-rail');
+    const cells = Math.min((blocks || []).length, 6);
+    let html = '';
+    for (let i = 0; i < cells; i++) {
+      html += `<div class="rail-cell${i === 0 ? ' is-first' : ''}">` +
+              `${String(i + 1).padStart(2, '0')}</div>`;
+    }
+    rail.innerHTML = html;
+  }
+
+  function renderBlockBody(block) {
+    const style = block.style || 'list';
+    const items = block.items || [];
+    if (style === 'list') {
+      return `<div class="list-items">${items.map(t =>
+        `<div class="list-item"><span>${esc(t)}</span></div>`).join('')}</div>`;
+    }
+    if (style === 'tags') {
+      return `<div class="tag-items">${items.map(t =>
+        `<span class="tag">${esc(t)}</span>`).join('')}</div>`;
+    }
+    if (style === 'metric') {
+      return `<div class="metric-items">${items.map(it => {
+        const p = Math.max(0, Math.min(100, Number(it.percent ?? 0)));
+        return `<div class="metric-row">
+          <div class="metric-head">
+            <span class="metric-label">${esc(it.label)}</span>
+            <span class="metric-value">${esc(it.value ?? '')}</span>
+          </div>
+          <div class="metric-track"><div class="metric-fill" style="width:${p}%"></div></div>
+        </div>`;
+      }).join('')}</div>`;
+    }
+    if (style === 'text') {
+      return `<div class="block-text">${esc(block.text)}</div>`;
+    }
+    return '';
+  }
+
+  /**
+   * data   = { name, nameEn, category, themeColor, hero, blocks: [...] }
+   *          字段说明见同目录 schema.md。emoji 字段被刻意忽略(宪法 H8)。
+   * params = space.json 的点分键名 → 值。缺省时用 :root 里的默认值。
+   */
+  function renderCard(data, params) {
+    params = params || {};
+    applyParams(params);
+
+    const accent = params['palette.accent'] || data.themeColor;
+    if (accent) {
+      document.documentElement.style.setProperty('--p-accent', accent);
+    }
+    // 取不到色相时退回默认 accent 的色相,而不是 0——0 是红色,会悄悄换掉整套配色
+    const accentHue = hexToHue(accent || '#E8913A') ?? 30;
+
+    renderOrbs(params, accentHue);
+
+    document.getElementById('head-title').textContent = data.name || '';
+    document.getElementById('head-sub').innerHTML =
+      (data.category ? `<span class="cat">${esc(data.category)}</span>` : '')
+      + (data.nameEn ? esc(data.nameEn) : '');
+    document.getElementById('footer-latin').textContent = (data.nameEn || '').toUpperCase();
+
+    /* 无主图不退回 emoji(宪法 H8),改用 nameEn 首字母的字母印记(E7);
+       连 nameEn 也没有时才退到 name 首字。 */
+    const heroSlot = document.getElementById('hero-slot');
+    if (data.hero) {
+      heroSlot.innerHTML = `<img class="hero-photo" src="${data.hero}">`;
+    } else {
+      const mark = (data.nameEn || data.name || '').trim().charAt(0).toUpperCase();
+      heroSlot.innerHTML = `<div class="hero-mark">${esc(mark)}</div>`;
+    }
+
+    renderRail(data.blocks);
+
+    document.getElementById('grid').innerHTML = (data.blocks || []).map((block, i) => `
+      <div class="section${block.span === 'full' ? ' span-full' : ''}">
+        <div class="sec-head">
+          <span class="sec-no">${String(i + 1).padStart(2, '0')}</span>
+          <span class="sec-title">${esc(block.title || '')}</span>
+        </div>
+        ${renderBlockBody(block)}
+      </div>`).join('');
+  }
+
+  window.renderCard = renderCard;
+</script>
+</body>
+</html>

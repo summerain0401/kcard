@@ -1,0 +1,381 @@
+{
+  "style": "aurora-glass",
+  "version": "1.0.0",
+  "status": "初版",
+  "note": [
+    "本文件声明生产组可自由组合的参数及其取值域。宪法(不可违反的构成要素与禁则)见 STYLE.md。",
+    "range 为初版设定,待实际产卡后按经验收紧,届时升 minor 版本。",
+    "scope=production 的维度生产组可自由填写;scope=design 属风格内部实现,生产组不可覆写。",
+    "配色模型是「幕布 + 色斑 + 玻璃 + 墨」四层:scrim/glass/ink 三层都是直接参数(与 almanac 同构,可用 contrastHSL() 精确校验);只有 orb 层的色相相对 accent 偏移,因为色斑就是主体色的光源化身。",
+    "色斑的位置不在本表——那是构图决策,由 layouts/*.css 给出。引擎只算色斑的颜色与尺寸。",
+    "accentExtraction 的输出域取三套风格里最鲜亮的一档:色斑要当光源用,取色发闷会让整张画面失去光。"
+  ],
+  "params": {
+    "scrim.hue": {
+      "default": 14,
+      "range": [0, 360],
+      "scope": "production",
+      "why": "幕布(画布底)色相。色斑之外的裸露区域即此色"
+    },
+    "scrim.saturation": {
+      "default": 0.1,
+      "range": [0, 0.24],
+      "scope": "production",
+      "why": "幕布饱和度。带一点色偏才不像纯黑背景板,过高会与色斑抢戏"
+    },
+    "scrim.lightness": {
+      "default": 0.085,
+      "range": [0.02, 0.14],
+      "scope": "production",
+      "why": "幕布明度。必须低于面板明度(宪法 H4),否则三层浮起关系反转"
+    },
+    "orb.count": {
+      "default": 3,
+      "values": [2, 3, 4],
+      "scope": "production",
+      "why": "色斑数量。少于 2 团时画面失去构图张力,多于 4 团会糊成彩色背景纸"
+    },
+    "orb.hueShifts": {
+      "default": [0, -18, -150, 92],
+      "range": [-180, 180],
+      "length": 4,
+      "unit": "deg",
+      "scope": "production",
+      "why": "四团色斑各自相对 accent 的色相偏移。整组暴露而非由步长推导——「主色 + 邻近色 + 无彩 + 远色」这套配方本身即设计控制项,任何等差插值都拟合不出。orb.count < 4 时尾部数值不参与渲染,但仍须填满长度 4。⚠ 邻近色那一档的正负方向要看 accent 落在哪:暖橙(约 40°)上 +26 会滑进黄绿并与主色打架,故默认取 -18 往红偏"
+    },
+    "orb.saturations": {
+      "default": [0.92, 0.86, 0.04, 0.7],
+      "range": [0, 1],
+      "length": 4,
+      "scope": "production",
+      "why": "四团色斑各自的饱和度。至少一颗须接近无彩(见 invariants),那是构成要素 E2"
+    },
+    "orb.lightnesses": {
+      "default": [0.54, 0.6, 0.96, 0.46],
+      "range": [0.15, 0.98],
+      "length": 4,
+      "scope": "production",
+      "why": "四团色斑各自的明度。近白那颗通常取 0.9 以上"
+    },
+    "orb.sizes": {
+      "default": [760, 560, 480, 380],
+      "range": [180, 820],
+      "length": 4,
+      "unit": "px",
+      "scope": "production",
+      "why": "四团色斑各自的直径。接近画布量级(1080)才有光源感,小圆会读成图标。偏小还有个更隐蔽的代价:色斑缩到只能蹲在画布四角,透过玻璃的就只剩边缘一线色晕,面板中段退化成死黑的深色板——初版默认值 [560,420,380,300] 就是这么失效的"
+    },
+    "orb.blur": {
+      "default": 0,
+      "range": [0, 160],
+      "unit": "px",
+      "scope": "production",
+      "why": "色斑自身的模糊半径。默认 0 即硬边实心圆——画面的柔和来自面板的 backdrop-filter,不是来自色斑本身。调高可得雾感变体"
+    },
+    "orb.opacity": {
+      "default": 0.85,
+      "range": [0.3, 1],
+      "scope": "production",
+      "why": "色斑整体不透明度。压低即让色斑沉进幕布"
+    },
+    "glass.hue": {
+      "default": 18,
+      "range": [0, 360],
+      "scope": "production",
+      "why": "玻璃面板色相。低饱和下只影响冷暖倾向"
+    },
+    "glass.saturation": {
+      "default": 0.09,
+      "range": [0, 0.18],
+      "scope": "production",
+      "why": "玻璃面板饱和度。上限 0.18 保证面板始终是近中性炭色——主体图与 accent 才跳得出来"
+    },
+    "glass.lightness": {
+      "default": 0.135,
+      "range": [0.06, 0.26],
+      "scope": "production",
+      "why": "玻璃面板明度。上限 0.26 是宪法 H1(不得滑向浅色毛玻璃),下限 0.06 须高于幕布(H4)"
+    },
+    "glass.opacity": {
+      "default": 0.74,
+      "range": [0.55, 0.94],
+      "scope": "production",
+      "why": "玻璃面板不透明度。下限 0.55 是宪法 H2——透太多则文字骑在色斑上"
+    },
+    "glass.blur": {
+      "default": 44,
+      "range": [20, 90],
+      "unit": "px",
+      "scope": "production",
+      "why": "面板的 backdrop-filter 模糊半径。下限 20 是宪法 H3,这是本风格成立的物理前提"
+    },
+    "glass.radius": {
+      "default": 30,
+      "range": [16, 52],
+      "unit": "px",
+      "scope": "production",
+      "why": "面板圆角。下限 16 是宪法 H6。小元件半径由 chip.radius 单独给,但两者应保持同一量级"
+    },
+    "glass.edgeLight": {
+      "default": 0.16,
+      "range": [0, 0.35],
+      "scope": "production",
+      "why": "面板左上顶边高光的峰值不透明度(构成要素 E4)。这是玻璃厚度感的唯一来源,不得用发光替代"
+    },
+    "glass.borderAlpha": {
+      "default": 0.14,
+      "range": [0, 0.3],
+      "scope": "production",
+      "why": "面板与小元件的描边不透明度。同一个值贯穿全部玻璃元件,保证材质统一"
+    },
+    "glass.shadowY": {
+      "default": 30,
+      "range": [8, 60],
+      "unit": "px",
+      "scope": "production",
+      "why": "面板投影垂直偏移。仅允许纯黑投影(宪法 H5)"
+    },
+    "glass.shadowBlur": {
+      "default": 70,
+      "range": [24, 120],
+      "unit": "px",
+      "scope": "production",
+      "why": "面板投影模糊半径"
+    },
+    "glass.shadowAlpha": {
+      "default": 0.5,
+      "range": [0.2, 0.8],
+      "scope": "production",
+      "why": "面板投影不透明度"
+    },
+    "glass.inset": {
+      "default": 46,
+      "range": [24, 80],
+      "unit": "px",
+      "scope": "production",
+      "why": "面板四周距画布边缘的内缩。这圈裸露的幕布是色斑唯一的露脸机会,收太紧则色斑全被面板盖住"
+    },
+    "ink.hue": {
+      "default": 18,
+      "range": [0, 360],
+      "scope": "production",
+      "why": "文字色相。通常与玻璃同相,让文字像是从面板里长出来的"
+    },
+    "ink.saturation": {
+      "default": 0.1,
+      "range": [0, 0.25],
+      "scope": "production",
+      "why": "文字饱和度。纯白文字在深玻璃上偏冷硬,带一点色偏更耐看"
+    },
+    "ink.lightness": {
+      "default": 0.95,
+      "range": [0.84, 1.0],
+      "scope": "production",
+      "why": "主文字明度(标题与正文)"
+    },
+    "ink.secondaryLightness": {
+      "default": 0.64,
+      "range": [0.45, 0.8],
+      "scope": "production",
+      "why": "次级文字明度(副标题、编号、引文、页脚)。必须浅于主文字,否则视觉层级反转"
+    },
+    "palette.accent": {
+      "default": null,
+      "type": "hex",
+      "scope": "production",
+      "why": "组级固定强调色(如 \"#E8913A\")。留空则每张卡各自取色:优先用 card.json 的 themeColor,再缺则由 render.py 从 hero 图自动提取。色斑色相全部由它旋转推导,故色相全域自由"
+    },
+    "type.sans": {
+      "default": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
+      "scope": "production",
+      "constraint": "必须为无衬线族(宪法 H7)",
+      "why": "中文标题与正文字体栈"
+    },
+    "type.latin": {
+      "default": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
+      "scope": "production",
+      "constraint": "必须为无衬线族(宪法 H7)",
+      "why": "拉丁文、章节编号、字母印记、指标数值字体栈"
+    },
+    "type.titleSize": {
+      "default": 76,
+      "range": [52, 104],
+      "unit": "px",
+      "scope": "production",
+      "why": "横排中文大标题字号"
+    },
+    "type.titleTracking": {
+      "default": -1,
+      "range": [-4, 4],
+      "unit": "px",
+      "scope": "production",
+      "why": "大标题字距。无衬线大字须收紧(负值)才致密高级,放松会显松垮"
+    },
+    "type.titleWeight": {
+      "default": 600,
+      "values": [400, 500, 600, 700],
+      "scope": "production",
+      "why": "大标题字重。无衬线的气质高度依赖字重,故单独开放"
+    },
+    "type.subtitleSize": {
+      "default": 17,
+      "range": [13, 24],
+      "unit": "px",
+      "scope": "production",
+      "why": "副标题(拉丁名 / 分类)字号"
+    },
+    "type.secTitleSize": {
+      "default": 19,
+      "range": [15, 26],
+      "unit": "px",
+      "scope": "production",
+      "why": "章节标题字号"
+    },
+    "type.bodySize": {
+      "default": 16,
+      "range": [13, 19],
+      "unit": "px",
+      "scope": "production",
+      "why": "正文字号"
+    },
+    "type.bodyLeading": {
+      "default": 1.7,
+      "range": [1.45, 2.0],
+      "scope": "production",
+      "why": "正文行高倍数"
+    },
+    "type.labelSize": {
+      "default": 12,
+      "range": [10, 16],
+      "unit": "px",
+      "scope": "production",
+      "why": "小标签字号(章节编号、页脚)"
+    },
+    "type.labelTracking": {
+      "default": 2.4,
+      "range": [0, 6],
+      "unit": "px",
+      "scope": "production",
+      "why": "小标签字距。小号无衬线必须给足字距,这是本风格的字体骨架之一"
+    },
+    "layout.columns": {
+      "default": 2,
+      "values": [1, 2],
+      "scope": "production",
+      "why": "章节网格栏数。span:full 的块始终占满整行"
+    },
+    "layout.columnGap": {
+      "default": 44,
+      "range": [28, 80],
+      "unit": "px",
+      "scope": "production",
+      "why": "两栏间距。columns=1 时此值无效"
+    },
+    "layout.panelPadding": {
+      "default": [56, 52, 44],
+      "range": [32, 88],
+      "unit": "px",
+      "scope": "production",
+      "why": "玻璃面板内边距 [上, 左右, 下]"
+    },
+    "layout.headerHeight": {
+      "default": 500,
+      "range": [400, 640],
+      "unit": "px",
+      "scope": "production",
+      "why": "头版区高度"
+    },
+    "layout.heroSize": {
+      "default": 400,
+      "range": [300, 520],
+      "unit": "px",
+      "scope": "production",
+      "why": "主体图展示尺寸(正方形边长)。无主图时字母印记按此尺寸缩放"
+    },
+    "layout.density": {
+      "default": 1.0,
+      "range": [0.8, 1.3],
+      "scope": "production",
+      "why": "章节内行距与块间距的统一缩放系数"
+    },
+    "layout.railSize": {
+      "default": 44,
+      "range": [30, 64],
+      "unit": "px",
+      "scope": "production",
+      "why": "章节导航小玻璃片的边长(构成要素 E5)。片间距按此值的 0.27 倍派生,不单独开放"
+    },
+    "chip.opacity": {
+      "default": 0.1,
+      "range": [0.04, 0.22],
+      "scope": "production",
+      "why": "玻璃小元件(标签胶囊、指标槽、引文块、导航片)相对面板的提亮量。过高会让小元件抢过大面板,材质层级反转"
+    },
+    "chip.radius": {
+      "default": 12,
+      "range": [6, 24],
+      "unit": "px",
+      "scope": "production",
+      "why": "玻璃小元件圆角。标签胶囊不受此值影响(恒为全圆角)"
+    }
+  },
+  "accentExtraction": {
+    "scope": "design",
+    "why": "从 hero 图提取强调色的判定参数。本风格的输出域是三套里最鲜亮的一档——色斑要当光源用,取色发闷会让整张画面失去光。这与 almanac 刻意压低的赭石朱砂域形成对照。",
+    "sampleSize": 256,
+    "alphaMin": 153,
+    "satMin": 78,
+    "valMin": 54,
+    "minPixels": 64,
+    "hueBins": 36,
+    "hueSpread": 1,
+    "outSatRange": [0.58, 0.9],
+    "outValRange": [0.78, 0.98]
+  },
+  "invariants": [
+    {
+      "rule": "contrastHSL(ink.hue, ink.saturation, ink.lightness, glass.hue, glass.saturation, glass.lightness) >= 4.5",
+      "why": "宪法 H9:正文可读性底线。玻璃与文字都是直接参数,可精确计算。近似之处在于面板半透明,实际背景是玻璃色与色斑的混合——但 glass.opacity >= 0.55(H2)保证玻璃色占主导,且色斑明度通常高于玻璃,故本式是保守估计"
+    },
+    {
+      "rule": "contrastHSL(ink.hue, ink.saturation, ink.secondaryLightness, glass.hue, glass.saturation, glass.lightness) >= 3.0",
+      "why": "次级文字(副标题、编号、引文、页脚)也须可读。要求低于正文,因其字号小但非长文阅读"
+    },
+    {
+      "rule": "ink.secondaryLightness < ink.lightness",
+      "why": "次级文字必须浅于主文字,否则视觉层级反转"
+    },
+    {
+      "rule": "glass.lightness > scrim.lightness",
+      "why": "宪法 H4:面板必须浮于幕布之上。面板比底幕暗就成了凹槽,三层关系反转"
+    },
+    {
+      "rule": "glass.lightness <= 0.26",
+      "why": "宪法 H1:浅色半透明面板即「小红书毛玻璃」,本项目已两次否定该方向。取值域已限死,此式是第二道闸"
+    },
+    {
+      "rule": "glass.opacity >= 0.55",
+      "why": "宪法 H2:透太多则文字骑在色斑上,画面花、可读性塌"
+    },
+    {
+      "rule": "glass.blur >= 20",
+      "why": "宪法 H3:没有 backdrop-filter 的深色板不是玻璃,只是深色板"
+    },
+    {
+      "rule": "min(orb.saturations) <= 0.15",
+      "why": "构成要素 E2:色斑中至少一颗须接近无彩。全部有彩会让画面变成彩色糖水,失去呼吸口"
+    },
+    {
+      "rule": "glass.opacity > 0.85 => glass.blur >= 40",
+      "why": "面板越不透明,透过来的色晕越少,越需要大模糊撑住玻璃感;否则只剩一块深色板(违反 H3 的精神)"
+    },
+    {
+      "rule": "layout.heroSize <= layout.headerHeight - 80",
+      "why": "主体不得顶满头版。留白是本风格的呼吸感来源,主体贴边会失去「浮在玻璃上」的从容"
+    },
+    {
+      "rule": "chip.opacity > 0.18 => glass.borderAlpha <= 0.2",
+      "why": "小元件提亮偏高时描边须收敛,否则每个胶囊都变成高对比方框,面板碎成一堆小卡片"
+    }
+  ]
+}
