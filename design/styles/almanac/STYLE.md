@@ -77,9 +77,10 @@
 
 ## 七、已知偏离
 
-- **字体未自持**:本风格依赖 macOS 系统衬线字体(Songti SC / Baskerville /
-  PT Serif)。设计部交付标准要求字体随风格自持,但可自由分发的中文衬线
-  (思源宋体 / Noto Serif CJK,OFL 授权)本机不存在,需联网下载约 30MB。
-  **此项未完成,是明确的技术债**,换渲染机器版式会不一致。
+- **字体依赖 macOS 系统字体**(Songti SC / Baskerville / PT Serif)。
+  这是**有意接受的约束,不是待办**——本项目按 macOS 单机渲染设计,
+  不追求跨平台一致。代价是换到 Linux/Windows 渲染会 fallback 到别的字体、
+  版式与设计稿不符;若哪天需要跨平台,再引入自持字体
+  (思源宋体 / Noto Serif CJK,OFL 授权,约 30MB)。
 - **hero 素材依赖生产组**:本风格的 `sample.json` 无主图,预览走 emoji 兜底,
   故 E4 标本式构图与 E5 引线标签的实际效果需配真实主图才能完全体现。

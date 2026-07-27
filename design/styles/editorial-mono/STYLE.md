@@ -64,5 +64,7 @@
 - **hero 位 emoji 兜底**:无 `hero` 图时退化为大号 emoji(现行苹果 / 橙子 / 葡萄三卡)。
   这是**主图缺失时允许的临时形态**——可正常出图使用,但补齐 AI 生成的无文字
   真实质感主图后应替换。注意宪法 H4(禁 emoji)约束的是**章节图标**,不含 hero 位。
-- **字体未自持**:现依赖 macOS 系统字体(Songti SC / Didot / PingFang SC),
-  换渲染机器版式不一致。字体自持已列为设计部交付标准,待补。
+- **字体依赖 macOS 系统字体**(Songti SC / Didot / PingFang SC)。
+  这是**有意接受的约束,不是待办**——本项目按 macOS 单机渲染设计,
+  不追求跨平台一致。换到 Linux/Windows 会 fallback 到别的字体、版式与设计稿不符;
+  若哪天需要跨平台,再引入自持字体(思源宋体 / Noto Serif CJK,OFL 授权)。
