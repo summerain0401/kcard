@@ -1,22 +1,25 @@
-# food-glass 模板数据字段说明
+# editorial-mono 风格数据字段说明
 
 深色编辑排版(画册/杂志风)知识卡片:竖排宋体大标题 + Didot 衬线巨字 + 细线章节
 + 衬线编号,主题色只用于编号、指标线等少量细节。用于「一个主体 + 若干信息块」
 结构的内容,原型场景是食物百科(如西红柿),但字段本身是通用的,同样适用于其他
 "主体 + 属性面板"类知识点。
 
-> 命名说明:模板目录名 `food-glass` 沿用自最初的毛玻璃方案,现版式已改为
-> 编辑排版风;因 card.json 以目录名引用模板,暂不改名。
+> 命名说明:本风格原名 `food-glass`(沿用自最初的毛玻璃方案),2026-07-27
+> 重构为「设计部/生产部」两层组织后正式改名为 `editorial-mono`,与实际
+> 编辑排版风一致。风格归属由生产组的 `profile.json` 声明,不再写在 card.json 里。
 > 字体依赖 macOS 系统字体(Songti SC / Didot / PingFang SC),换渲染机器需确认。
 
-`card.json` 顶层结构:
+`production/<group>/cards/<topic>/card.json` 顶层结构(纯内容,不含风格声明):
 
 ```json
 {
-  "template": "food-glass",
   "data": { ... 见下 }
 }
 ```
+
+使用哪个风格由同组的 `production/<group>/profile.json` 的 `style` 字段决定,
+本卡片目录本身不再声明模板/风格归属。
 
 ## 顶层字段(data)
 
@@ -70,7 +73,7 @@ AI 生图工具经常无视"透明背景"要求,导出纯白底,或把透明网�
 只要背景是**中性色**(R≈G≈B),用 `scripts/cutout.py` 键掉即可:
 
 ```bash
-python scripts/cutout.py cards/<topic>/hero.png    # → hero-cut.png
+python scripts/cutout.py production/<group>/cards/<topic>/hero.png    # → hero-cut.png
 ```
 
 然后把 `card.json` 的 `hero` 指向 `hero-cut.png`。脚本在主体占比异常时会告警:

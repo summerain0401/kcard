@@ -6,11 +6,11 @@ cutout.py - 主图去底工具
     .venv/bin/python scripts/cutout.py <图片路径> [-o 输出路径]
 
 把中性色背景(纯白/浅灰/AI 工具烤进像素的透明网格)键出为 alpha 通道,
-供深色模板(如 food-glass)使用。默认输出到 <同目录>/<原名>-cut.png。
+供深色风格(如 editorial-mono)使用。默认输出到 <同目录>/<原名>-cut.png。
 
 适用前提:主体是彩色的,背景是中性色(R≈G≈B)且明亮。
 不适用:背景带明显色相(如暖色渐变背景),此时主体与背景彩度接近,键不干净,
-       应重新生成透明底素材——详见 templates/food-glass/schema.md。
+       应重新生成透明底素材——详见 design/styles/editorial-mono/schema.md。
 
 输入若已带有效 alpha 通道,直接跳过,不重复处理。
 """

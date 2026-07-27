@@ -1,40 +1,45 @@
 # kcard
 
-结构化 JSON → HTML 模板 → Playwright 无头截图,产出适合社交平台传播的知识卡片图。
+结构化 JSON → HTML 渲染 → Playwright 无头截图,产出适合社交平台传播的知识卡片图。
 
-排版与文字全部由 HTML 模板渲染,不用 AI 逐张生图,因此**文字零错误、风格一致、可批量**;
+项目分「设计部 / 生产部」两层:设计部产出风格系统(视觉规范 + 参数空间),
+生产部按业务分组,各组选定一套风格后自由搭配、批量产卡。详见 `PLAN.md`。
+
+排版与文字全部由 HTML 渲染,不用 AI 逐张生图,因此**文字零错误、风格一致、可批量**;
 同一份数据重复渲染像素级一致。AI 只负责两件事:填卡片数据、生成无文字的主图素材。
 
 ## 快速开始
 
 ```bash
 # 环境:Python 3.13 + playwright(chromium)+ Pillow + numpy + scipy
-python scripts/cutout.py cards/tomato/hero.png   # 主图去底 → hero-cut.png
-python scripts/render.py cards/tomato            # 取色 + 渲染 → output.png
+python scripts/cutout.py production/food-encyclopedia/cards/tomato/hero.png   # 主图去底 → hero-cut.png
+python scripts/render.py production/food-encyclopedia/cards/tomato            # 取色 + 渲染 → output.png
 ```
 
-> ⚠️ **字体依赖**:模板使用 macOS 系统字体(Songti SC / Didot / PingFang SC)。
+> ⚠️ **字体依赖**:风格使用 macOS 系统字体(Songti SC / Didot / PingFang SC)。
 > 在 Linux/Windows 上渲染会 fallback 到其他字体,版式效果与设计稿不一致。
 
 ## 目录结构
 
 ```
-templates/<name>/     # 一个目录 = 一种卡片形态
-  card.html           #   版式 + 样式 + renderCard(data)
-  schema.md           #   数据字段说明(填卡前先读)
-  sample.json         #   示例数据
+design/styles/<name>/  # 一个目录 = 一套风格(设计部所有)
+  card.html            #   版式 + 样式 + renderCard(data)
+  schema.md             #   数据字段说明(填卡前先读)
+  sample.json           #   示例数据
+production/<group>/    # 一个目录 = 一个生产组(生产部所有)
+  profile.json         #   { "style": "<name>" } 声明本组用哪套风格
+  cards/<topic>/
+    card.json          #   {"data": {...}},纯内容,不含风格声明
+    hero.png           #   AI 生成的主图素材(需透明底)
+    hero-cut.png       #   去底后的素材
+    output.png         #   渲染产物
 scripts/
-  render.py           # 渲染脚本,模板无关
-  cutout.py           # 主图去底(中性背景键出为 alpha)
-cards/<topic>/
-  card.json           # {"template": "...", "data": {...}}
-  hero.png            # AI 生成的主图素材(需透明底)
-  hero-cut.png        # 去底后的素材
-  output.png          # 渲染产物
+  render.py            # 渲染脚本,读 profile 定位风格
+  cutout.py            # 主图去底(中性背景键出为 alpha)
 ```
 
-`card.json` 顶层用 `template` 字段声明使用哪个模板,模板之间完全隔离,
-新增模板不影响既有模板。字段详见对应模板的 `schema.md`。
+生产组的卡片本身不声明使用哪套风格,由同组 `profile.json` 的 `style` 字段决定;
+风格之间完全隔离,新增风格不影响既有风格。字段详见对应风格的 `schema.md`。
 
 ## 设计原则
 
@@ -52,4 +57,4 @@ cards/<topic>/
 西红柿 · 香蕉 · 苹果 · 橙子 · 葡萄
 
 其中苹果/橙子/葡萄暂用 emoji 作主视觉,待补真实主图素材
-(生图 prompt 模板见 `templates/food-glass/schema.md`)。
+(生图 prompt 模板见 `design/styles/editorial-mono/schema.md`)。

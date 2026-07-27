@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-render.py - 知识卡片渲染脚本(模板无关)
+render.py - 知识卡片渲染脚本(风格无关)
 
 用法:
     .venv/bin/python scripts/render.py <card_dir>
 
-读取 <card_dir>/card.json,取其 "template" 字段定位 templates/<template>/card.html,
-将 "data" 字段注入模板的 renderCard(data) 函数,等待字体加载完成后截图,
+<card_dir> 形如 production/<group>/cards/<topic>。读取同组的
+production/<group>/profile.json 取其 "style" 字段定位
+design/styles/<style>/card.html,将 <card_dir>/card.json 的 "data" 字段
+注入该风格的 renderCard(data) 函数,等待字体加载完成后截图,
 产物写到 <card_dir>/output.png。
 
-模板约定:
-- templates/<name>/card.html 必须挂载 window.renderCard(data)
+风格约定:
+- design/styles/<name>/card.html 必须挂载 window.renderCard(data)
 - card.html 内通过 CSS 自行定义画布尺寸(如 .stage 的 width/min-height),
   render.py 用 full_page 截图,不强行指定 viewport 高度
 - data 中约定的图片字段(如 "hero")若是 <card_dir> 内的相对文件名且文件存在,
@@ -27,7 +29,7 @@ from playwright.sync_api import sync_playwright
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-TEMPLATES_DIR = PROJECT_ROOT / "templates"
+STYLES_DIR = PROJECT_ROOT / "design" / "styles"
 
 # 与 templates/*/card.html 里 body/.stage 的 width 保持一致(目前各模板均为 1080)。
 # height 只是 viewport 占位值,full_page 截图会按实际内容高度出图。
@@ -119,27 +121,34 @@ def main():
     args = parse_args()
     card_dir = Path(args.card_dir).resolve()
     card_json_path = card_dir / "card.json"
+    group_dir = card_dir.parent.parent
+    profile_path = group_dir / "profile.json"
 
+    if not profile_path.exists():
+        print(f"错误: 找不到 {profile_path}(card_dir 应形如 production/<group>/cards/<topic>)", file=sys.stderr)
+        sys.exit(1)
     if not card_json_path.exists():
         print(f"错误: 找不到 {card_json_path}", file=sys.stderr)
         sys.exit(1)
 
+    with profile_path.open("r", encoding="utf-8") as f:
+        profile = json.load(f)
     with card_json_path.open("r", encoding="utf-8") as f:
         card = json.load(f)
 
-    template_name = card.get("template")
+    style_name = profile.get("style")
     data = card.get("data")
 
-    if not template_name:
-        print(f"错误: {card_json_path} 缺少 template 字段", file=sys.stderr)
+    if not style_name:
+        print(f"错误: {profile_path} 缺少 style 字段", file=sys.stderr)
         sys.exit(1)
     if data is None:
         print(f"错误: {card_json_path} 缺少 data 字段", file=sys.stderr)
         sys.exit(1)
 
-    template_path = TEMPLATES_DIR / template_name / "card.html"
+    template_path = STYLES_DIR / style_name / "card.html"
     if not template_path.exists():
-        print(f"错误: 找不到模板 {template_path}", file=sys.stderr)
+        print(f"错误: 找不到风格 {template_path}", file=sys.stderr)
         sys.exit(1)
 
     assets = resolve_asset_uris(data, card_dir)
