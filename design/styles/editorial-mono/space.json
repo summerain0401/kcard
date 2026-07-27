@@ -1,0 +1,202 @@
+{
+  "style": "editorial-mono",
+  "version": "1.0.0",
+  "status": "阶段1提炼稿",
+
+  "note": [
+    "本文件声明生产组可自由组合的参数及其取值域。宪法(不可违反的构成要素与禁则)见 STYLE.md。",
+    "default 值精确取自 card.html 与 render.py 的现行实现,是阶段2引擎化后保持视觉不变的基准。",
+    "range 为阶段1初步推断,尚未实测标定;阶段2边做边试后收紧,届时升 minor 版本。",
+    "scope=production 的维度生产组可自由填写;scope=design 属风格内部实现,生产组不可覆写。",
+    "本表覆盖搭配层面的维度。未列出的像素级细节固定在引擎内,不开放——需要时向设计部提案扩展。",
+    "接线状态:accentExtraction 段已被 render.py 消费;params 段待阶段2引擎化后生效。"
+  ],
+
+  "params": {
+    "palette.accentHue": {
+      "default": null, "range": [0, 360], "free": true, "scope": "production",
+      "why": "留空则由 render.py 从 hero 图自动提取;显式填写则以填写值为准"
+    },
+    "palette.bgHueShift": {
+      "default": 180, "range": [150, 210], "scope": "production",
+      "why": "底色相对 accent 的色相偏移。±30° 内仍满足宪法 H2 的异色相要求"
+    },
+    "palette.bgSaturationFloor": {
+      "default": 0.32, "range": [0.10, 0.45], "scope": "production",
+      "why": "最深档(--bg-floor)饱和度。决定底色的冷暖倾向强弱"
+    },
+    "palette.bgSaturationTop": {
+      "default": 0.24, "range": [0.10, 0.40], "scope": "production",
+      "why": "最亮档(--bg-hi)饱和度。现行实现自下而上递减"
+    },
+    "palette.bgLightnessFloor": {
+      "default": 0.032, "range": [0.02, 0.06], "scope": "production",
+      "why": "最深档明度"
+    },
+    "palette.bgLightnessTop": {
+      "default": 0.112, "range": [0.06, 0.12], "scope": "production",
+      "why": "最亮档明度。上限 0.12 是宪法 H1,不可越界"
+    },
+    "palette.inkTint": {
+      "default": 0.07, "range": [0, 0.15], "scope": "production",
+      "why": "正文文字混入 accent 的比例,让文字与主体色隐约呼应"
+    },
+    "palette.lineTint": {
+      "default": 0.26, "range": [0.10, 0.40], "scope": "production",
+      "why": "分章细线混入 accent 的比例"
+    },
+    "palette.ghostTint": {
+      "default": 0.30, "range": [0.15, 0.45], "scope": "production",
+      "why": "头版 Didot 巨字混入 accent 的比例。过高会让巨字抢主体"
+    },
+    "palette.ringTint": {
+      "default": 0.32, "range": [0.15, 0.45], "scope": "production",
+      "why": "主体展台椭圆线混入 accent 的比例"
+    },
+
+    "type.serifCN": {
+      "default": "'Songti SC', 'STSong', 'Noto Serif CJK SC', serif",
+      "scope": "production",
+      "constraint": "必须为衬线/宋体族(宪法 H8)",
+      "why": "中文大标题与章节标题字体栈"
+    },
+    "type.didot": {
+      "default": "'Didot', 'Bodoni 72', 'Times New Roman', serif",
+      "scope": "production",
+      "constraint": "必须为衬线族(宪法 H8)",
+      "why": "拉丁巨字、章节编号、指标数值字体栈"
+    },
+    "type.sans": {
+      "default": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
+      "scope": "production",
+      "why": "正文与辅助信息字体栈。仅用于非标题文本"
+    },
+    "type.titleSize": {
+      "default": 100, "range": [72, 132], "unit": "px", "scope": "production",
+      "why": "竖排中文大标题字号"
+    },
+    "type.titleTracking": {
+      "default": 14, "range": [6, 24], "unit": "px", "scope": "production",
+      "why": "竖排标题字距。竖排需要比横排更大的字距才透气"
+    },
+    "type.ghostSize": {
+      "default": 188, "range": [120, 240], "unit": "px", "scope": "production",
+      "why": "头版 Didot 斜体巨字字号"
+    },
+    "type.secNoSize": {
+      "default": 30, "range": [20, 40], "unit": "px", "scope": "production",
+      "why": "章节编号(01/02)字号"
+    },
+    "type.secTitleSize": {
+      "default": 25, "range": [18, 32], "unit": "px", "scope": "production",
+      "why": "章节标题字号"
+    },
+    "type.bodySize": {
+      "default": 17.5, "range": [15, 20], "unit": "px", "scope": "production",
+      "why": "列表正文字号"
+    },
+    "type.bodyLeading": {
+      "default": 1.58, "range": [1.40, 1.90], "scope": "production",
+      "why": "列表正文行高倍数"
+    },
+
+    "layout.columns": {
+      "default": 2, "values": [1, 2], "scope": "production",
+      "why": "章节网格栏数。span:full 的块始终占满整行,不受此影响"
+    },
+    "layout.columnGap": {
+      "default": 56, "range": [32, 88], "unit": "px", "scope": "production",
+      "why": "两栏间距。columns=1 时此值无效"
+    },
+    "layout.pagePadding": {
+      "default": [64, 64, 48], "range": [40, 96], "unit": "px", "scope": "production",
+      "why": "画布内边距 [上, 左右, 下]"
+    },
+    "layout.headerHeight": {
+      "default": 560, "range": [440, 680], "unit": "px", "scope": "production",
+      "why": "头版区高度。大留白是本风格的呼吸感来源"
+    },
+    "layout.heroSize": {
+      "default": 470, "range": [360, 560], "unit": "px", "scope": "production",
+      "why": "主体图展示尺寸(正方形边长)"
+    },
+    "layout.density": {
+      "default": 1.0, "range": [0.80, 1.30], "scope": "production",
+      "why": "章节内行距与块间距的统一缩放系数。<1 更紧凑,>1 更疏朗"
+    },
+
+    "material.grainOpacity": {
+      "default": 0.14, "range": [0, 0.28], "scope": "production",
+      "why": "纸感噪点强度。0 即关闭噪点"
+    },
+    "material.heroShadowY": {
+      "default": 22, "range": [8, 40], "unit": "px", "scope": "production",
+      "why": "主体投影垂直偏移"
+    },
+    "material.heroShadowBlur": {
+      "default": 26, "range": [12, 48], "unit": "px", "scope": "production",
+      "why": "主体投影模糊半径"
+    },
+    "material.heroShadowAlpha": {
+      "default": 0.55, "range": [0.30, 0.75], "scope": "production",
+      "why": "主体投影不透明度。仅允许纯黑投影(宪法 H6)"
+    },
+    "material.tintPeak": {
+      "default": 0.26, "range": [0, 0.30], "scope": "production",
+      "why": "主体背后 accent 光晕圆的峰值不透明度。上限 0.30 是宪法 H3,不可越界"
+    },
+    "material.tintSize": {
+      "default": 500, "range": [380, 620], "unit": "px", "scope": "production",
+      "why": "accent 光晕圆直径"
+    },
+    "material.ringWidth": {
+      "default": 1, "range": [1, 2], "unit": "px", "scope": "production",
+      "why": "主体展台椭圆线宽。加粗会失去画廊底座的轻盈感"
+    }
+  },
+
+  "accentExtraction": {
+    "scope": "design",
+    "why": "从 hero 图提取主体色的判定参数。属风格内部实现——不同风格对'什么算主体色'及'提亮到什么水平'的判断不同。生产组若要定色,直接填 palette.accentHue,不覆写本段。",
+    "sampleSize": 256,
+    "alphaMin": 153,
+    "satMin": 82,
+    "valMin": 56,
+    "minPixels": 64,
+    "hueBins": 36,
+    "hueSpread": 1,
+    "outSatRange": [0.62, 0.88],
+    "outValRange": [0.82, 1.0]
+  },
+
+  "invariants": [
+    {
+      "rule": "hueDistance(palette.accentHue, palette.accentHue + palette.bgHueShift) >= 120",
+      "why": "宪法 H2:底色与主体色必须异色相,否则主体淹没在背景里"
+    },
+    {
+      "rule": "palette.bgLightnessTop <= 0.12",
+      "why": "宪法 H1:极深底是本风格地基"
+    },
+    {
+      "rule": "palette.bgLightnessFloor < palette.bgLightnessTop",
+      "why": "背景四档必须自下而上递增,否则渐变方向反转,头版失去聚光效果"
+    },
+    {
+      "rule": "material.tintPeak <= 0.30",
+      "why": "宪法 H3:accent 不得大面积使用"
+    },
+    {
+      "rule": "contrast(ink0(palette.inkTint), bgFloor(palette.bgLightnessFloor)) >= 4.5",
+      "why": "宪法 H9:正文可读性底线"
+    },
+    {
+      "rule": "material.grainOpacity > 0.20 => type.bodySize >= 17",
+      "why": "噪点偏重时小字会被噪点吃掉,可读性下降"
+    },
+    {
+      "rule": "type.titleSize > type.ghostSize * 0.75 => palette.ghostTint <= 0.35",
+      "why": "标题与巨字尺寸接近时,巨字必须更淡,否则两者在头版打架"
+    }
+  ]
+}

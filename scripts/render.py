@@ -62,13 +62,37 @@ def resolve_asset_uris(data, card_dir):
     return resolved
 
 
-def extract_accent(image_path):
+def load_accent_config(style_name):
+    """读取风格的取色配置(space.json 的 accentExtraction 段)。
+
+    "什么算主体色"以及"提亮到什么水平"是风格自己的判断,不同风格取法不同,
+    所以这组参数属于风格内部实现(scope=design),不放在生产组的 profile 里。
+    缺 space.json 或缺该段时直接报错,不静默套用默认值。
+    """
+    space_path = STYLES_DIR / style_name / "space.json"
+    if not space_path.exists():
+        print(f"错误: 自动取色需要 {space_path}", file=sys.stderr)
+        sys.exit(1)
+
+    with space_path.open("r", encoding="utf-8") as f:
+        space = json.load(f)
+
+    cfg = space.get("accentExtraction")
+    if not cfg:
+        print(f"错误: {space_path} 缺少 accentExtraction 段", file=sys.stderr)
+        sys.exit(1)
+    return cfg
+
+
+def extract_accent(image_path, cfg):
     """从主图提取一个适合做强调色的主色,返回 '#RRGGBB';失败返回 None。
 
     取色范围只含主体像素(alpha 足够高、有一定饱和度和亮度),排除阴影与高光。
     以色相直方图取峰值,再把饱和度/明度提到强调色该有的水平——素材本身的
     明度往往偏低,直接用会在深色底上发闷。
     整个过程无随机性,同一张图重复取色结果一致。
+
+    判定阈值全部来自 cfg(风格的 space.json → accentExtraction),不写死在这里。
     """
     try:
         import colorsys
@@ -79,28 +103,29 @@ def extract_accent(image_path):
         print(f"警告: 取色需要 numpy 与 Pillow ({exc}),跳过", file=sys.stderr)
         return None
 
-    im = Image.open(image_path).convert("RGBA").resize((256, 256), Image.BILINEAR)
+    size = int(cfg["sampleSize"])
+    im = Image.open(image_path).convert("RGBA").resize((size, size), Image.BILINEAR)
     arr = np.asarray(im)
     alpha = arr[..., 3]
     hsv = np.asarray(Image.fromarray(arr[..., :3]).convert("HSV")).astype(np.float32)
     hue, sat, val = hsv[..., 0], hsv[..., 1], hsv[..., 2]
 
     # 只保留主体上"有颜色"的像素:去掉透明区、灰暗阴影和惨白高光
-    mask = (alpha > 153) & (sat > 82) & (val > 56)
-    if int(mask.sum()) < 64:
+    mask = (alpha > cfg["alphaMin"]) & (sat > cfg["satMin"]) & (val > cfg["valMin"])
+    if int(mask.sum()) < int(cfg["minPixels"]):
         return None
 
     h, s, v = hue[mask], sat[mask], val[mask]
     weight = (s / 255.0) * (v / 255.0)
 
-    # 色相直方图找主色(36 个 bin,每 bin 10°)
-    bins = 36
+    # 色相直方图找主色(默认 36 个 bin,每 bin 10°)
+    bins = int(cfg["hueBins"])
     idx = np.clip((h / 256.0 * bins).astype(int), 0, bins - 1)
     peak = int(np.argmax(np.bincount(idx, weights=weight, minlength=bins)))
 
-    # 收拢到峰值附近 ±1 bin,注意色相是环形的
+    # 收拢到峰值附近 ±hueSpread 个 bin,注意色相是环形的
     span = (idx - peak + bins // 2) % bins - bins // 2
-    near = np.abs(span) <= 1
+    near = np.abs(span) <= int(cfg["hueSpread"])
     h, s, v, weight = h[near], s[near], v[near], weight[near]
 
     # 环形加权均值:先相对峰值展开,算完再折回
@@ -110,8 +135,10 @@ def extract_accent(image_path):
     hue_deg = (centre + float((offset * weight).sum()) / total) % 256.0
 
     # 提亮提饱和,保证在深色底上够跳
-    sat_out = min(max(float(np.median(s)) / 255.0, 0.62), 0.88)
-    val_out = min(max(float(np.median(v)) / 255.0, 0.82), 1.0)
+    sat_lo, sat_hi = cfg["outSatRange"]
+    val_lo, val_hi = cfg["outValRange"]
+    sat_out = min(max(float(np.median(s)) / 255.0, sat_lo), sat_hi)
+    val_out = min(max(float(np.median(v)) / 255.0, val_lo), val_hi)
 
     r, g, b = colorsys.hsv_to_rgb(hue_deg / 256.0, sat_out, val_out)
     return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
@@ -155,7 +182,7 @@ def main():
 
     # themeColor 缺省时从主图取色;显式写了就以数据为准
     if isinstance(data, dict) and not data.get("themeColor") and "hero" in assets:
-        accent = extract_accent(assets["hero"])
+        accent = extract_accent(assets["hero"], load_accent_config(style_name))
         if accent:
             data["themeColor"] = accent
             print(f"主题色取自主图 -> {accent}")
