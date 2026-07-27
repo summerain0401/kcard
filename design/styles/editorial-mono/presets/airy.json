@@ -3,37 +3,47 @@
   "displayName": "疏朗 · 单栏长卷",
   "description": "单栏竖排,字号放大、行距拉开、留白加厚,噪点压到几乎不可见。适合内容条目少但每条较长、希望从容阅读的选题。卡片会明显变高,适配长图分享场景。",
   "layout": "a-title-left",
-
   "params": {
     "palette.accent": null,
     "palette.bgHueShift": 180,
-    "palette.bgSaturation": [0.30, 0.28, 0.25, 0.22],
-    "palette.bgLightness": [0.028, 0.046, 0.068, 0.100],
+    "palette.bgSaturation": [
+      0.3,
+      0.28,
+      0.25,
+      0.22
+    ],
+    "palette.bgLightness": [
+      0.028,
+      0.046,
+      0.068,
+      0.1
+    ],
     "palette.inkTint": 0.06,
     "palette.lineTint": 0.22,
     "palette.ghostTint": 0.26,
     "palette.ringTint": 0.28,
-
     "type.titleSize": 112,
     "type.titleTracking": 16,
     "type.ghostSize": 188,
-    "type.secNoSize": 32,
-    "type.secTitleSize": 27,
-    "type.bodySize": 19,
+    "type.secNoSize": 49,
+    "type.secTitleSize": 41,
+    "type.bodySize": 29,
     "type.bodyLeading": 1.75,
-
     "layout.columns": 1,
     "layout.columnGap": 56,
-    "layout.pagePadding": [80, 80, 60],
+    "layout.pagePadding": [
+      80,
+      80,
+      60
+    ],
     "layout.headerHeight": 620,
     "layout.heroSize": 500,
     "layout.density": 1.25,
-
     "material.grainOpacity": 0.08,
     "material.heroShadowY": 26,
     "material.heroShadowBlur": 32,
     "material.heroShadowAlpha": 0.5,
-    "material.tintPeak": 0.20,
+    "material.tintPeak": 0.2,
     "material.tintSize": 540,
     "material.ringWidth": 1
   }

@@ -78,16 +78,16 @@
       "why": "头版 Didot 斜体巨字字号"
     },
     "type.secNoSize": {
-      "default": 30, "range": [20, 40], "unit": "px", "scope": "production",
-      "why": "章节编号(01/02)字号"
+      "default": 45, "range": [34, 54], "unit": "px", "scope": "production",
+      "why": "章节编号(01/02)字号。2026-07-27 随正文一起上调,见 type.bodySize 的 why"
     },
     "type.secTitleSize": {
-      "default": 25, "range": [18, 32], "unit": "px", "scope": "production",
-      "why": "章节标题字号"
+      "default": 37, "range": [30, 46], "unit": "px", "scope": "production",
+      "why": "章节标题字号。同上"
     },
     "type.bodySize": {
-      "default": 17.5, "range": [15, 20], "unit": "px", "scope": "production",
-      "why": "列表正文字号"
+      "default": 26, "range": [24, 32], "unit": "px", "scope": "production",
+      "why": "列表正文字号。2026-07-27 由 17.5px 上调:成品是 1080px 宽的图,手机上会被缩到约 36%,17.5px 到手机只剩 6.3pt,不足该有字号的三分之一。26px 是三套风格统一定的手机可读下限(aurora-glass 的 E9 判据),此后引擎内所有章节间距锚定到本参数,调字号版面会等比呼吸而非散架"
     },
     "type.bodyLeading": {
       "default": 1.58, "range": [1.40, 1.90], "scope": "production",

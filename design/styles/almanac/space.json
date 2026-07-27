@@ -130,44 +130,44 @@
       "why": "主标题字距。横排衬线不宜过松"
     },
     "type.subtitleSize": {
-      "default": 20,
+      "default": 31,
       "range": [
-        15,
-        28
+        26,
+        40
       ],
       "unit": "px",
       "scope": "production",
-      "why": "副标题(拉丁名/分类)字号"
+      "why": "副标题(拉丁名/分类)字号。2026-07-27 随正文一起上调,见 type.bodySize 的 why"
     },
     "type.numeralSize": {
-      "default": 22,
+      "default": 36,
       "range": [
-        16,
-        30
+        28,
+        46
       ],
       "unit": "px",
       "scope": "production",
-      "why": "罗马数字章节编号字号"
+      "why": "罗马数字章节编号字号。同上"
     },
     "type.secTitleSize": {
-      "default": 24,
+      "default": 39,
       "range": [
-        18,
-        32
+        30,
+        48
       ],
       "unit": "px",
       "scope": "production",
-      "why": "章节标题字号"
+      "why": "章节标题字号。同上"
     },
     "type.bodySize": {
-      "default": 17,
+      "default": 28,
       "range": [
-        14,
-        20
+        24,
+        34
       ],
       "unit": "px",
       "scope": "production",
-      "why": "正文字号"
+      "why": "正文字号。2026-07-27 由 17px 上调:成品是 1080px 宽的图,手机上会被缩到约 36%,17px 到手机只剩 6.1pt,不足该有字号的三分之一。26px 是三套风格统一定的手机可读下限(aurora-glass 的 E9 判据),此处取 28px 是按原设计比例反推、并保持与另两套风格一致的缩放系数(≈1.53–1.63)得到的贴近值。此后引擎内所有章节间距锚定到本参数,调字号版面会等比呼吸而非散架"
     },
     "type.bodyLeading": {
       "default": 1.62,
@@ -179,14 +179,14 @@
       "why": "正文行高倍数"
     },
     "type.labelSize": {
-      "default": 14,
+      "default": 21,
       "range": [
-        11,
-        18
+        17,
+        27
       ],
       "unit": "px",
       "scope": "production",
-      "why": "引线标签字号。图鉴标注字应明显小于正文"
+      "why": "引线标签字号。图鉴标注字应明显小于正文。2026-07-27 随正文一起上调"
     },
     "layout.columns": {
       "default": 2,

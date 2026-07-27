@@ -6,10 +6,10 @@
     "type.serifCN": "'Baskerville', 'PT Serif', 'Songti SC', 'STSong', serif",
     "type.titleSize": 68,
     "type.titleTracking": 1,
-    "type.subtitleSize": 19,
-    "type.bodySize": 16.5,
+    "type.subtitleSize": 31,
+    "type.bodySize": 27,
     "type.bodyLeading": 1.70,
-    "type.labelSize": 13,
+    "type.labelSize": 21,
 
     "paper.hue": 38,
     "paper.saturation": 0.16,

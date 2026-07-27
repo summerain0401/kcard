@@ -3,47 +3,43 @@
   "displayName": "田野 · 手记",
   "description": "对角构图的速写本气质:纸色更黄更旧、纸纹加重、暗角加深,版面收紧,标本推到右下角。适合松弛的手记感选题,或主体形态不规整、不宜端正陈列的素材。",
   "layout": "c-field-note",
-
   "params": {
     "paper.hue": 36,
     "paper.saturation": 0.19,
     "paper.lightness": 0.885,
-    "paper.grainOpacity": 0.30,
+    "paper.grainOpacity": 0.3,
     "paper.vignette": 0.11,
-
     "ink.hue": 24,
-    "ink.saturation": 0.30,
+    "ink.saturation": 0.3,
     "ink.lightness": 0.19,
     "ink.secondaryLightness": 0.44,
-
     "accent": null,
-
     "type.serifCN": "'Songti SC', 'STSong', 'Noto Serif CJK SC', serif",
     "type.serifLatin": "'Baskerville', 'PT Serif', 'Georgia', serif",
     "type.titleSize": 54,
     "type.titleTracking": 1,
-    "type.subtitleSize": 18,
-    "type.numeralSize": 20,
-    "type.secTitleSize": 22,
-    "type.bodySize": 16,
+    "type.subtitleSize": 29,
+    "type.numeralSize": 33,
+    "type.secTitleSize": 36,
+    "type.bodySize": 26,
     "type.bodyLeading": 1.52,
-    "type.labelSize": 13,
-
+    "type.labelSize": 21,
     "layout.columns": 2,
     "layout.columnGap": 44,
-    "layout.pagePadding": [60, 60, 48],
+    "layout.pagePadding": [
+      60,
+      60,
+      48
+    ],
     "layout.headerHeight": 470,
     "layout.specimenSize": 360,
     "layout.density": 0.88,
-
     "rule.thickWeight": 3,
     "rule.thinWeight": 1,
     "rule.gap": 4,
-
     "annotation.lineWidth": 1,
     "annotation.dotSize": 5,
     "annotation.reach": 96,
-
     "specimen.baselineWidth": 210,
     "specimen.baselineWeight": 1
   }

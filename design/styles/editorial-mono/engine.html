@@ -47,9 +47,9 @@
     --p-title-size: 100px;
     --p-title-tracking: 14px;
     --p-ghost-size: 188px;
-    --p-sec-no-size: 30px;
-    --p-sec-title-size: 25px;
-    --p-body-size: 17.5px;
+    --p-sec-no-size: 45px;
+    --p-sec-title-size: 37px;
+    --p-body-size: 26px;
     --p-body-leading: 1.58;
 
     --p-pad-top: 64px;
@@ -85,6 +85,29 @@
     --track: color-mix(in srgb, var(--accent) var(--p-track-tint), rgb(247 244 239 / 0.10));
     --ghost-ink: color-mix(in srgb, var(--accent) var(--p-ghost-tint), rgb(247 244 239 / 0.085));
     --ring: color-mix(in srgb, var(--accent) var(--p-ring-tint), rgb(247 244 239 / 0.20));
+  }
+
+  /* 章节区的间距锚定到 --p-body-size,不写 px 常量——理由与 aurora-glass 引擎
+     头部注释相同:成品在手机上被缩到约 36%,间距若写死 px,一调字号版面比例
+     就散架。系数 = 引擎化前(bodySize 17.5px 时代)的原始 px 值 ÷ 17.5,
+     故这次把 bodySize 从 17.5 提到可读区间后,版面比例与提字号前逐位一致。 */
+  .stage {
+    --sp-sec-pad-top:    calc(var(--p-body-size) * 1.2571 * var(--p-density));
+    --sp-sec-pad-bottom: calc(var(--p-body-size) * 1.4857 * var(--p-density));
+    --sp-sec-head-gap:   calc(var(--p-body-size) * 0.8);
+    --sp-sec-head-mb:    calc(var(--p-body-size) * 1.1429 * var(--p-density));
+    --sp-list-gap:       calc(var(--p-body-size) * 0.6286 * var(--p-density));
+    --sp-list-item-gap:  calc(var(--p-body-size) * 0.6857);
+    --sp-dash:           calc(var(--p-body-size) * 0.8);
+    --sp-tag-sep-mx:     calc(var(--p-body-size) * 0.7429);
+    --sp-metric-label-w: calc(var(--p-body-size) * 8.5714);
+    --sp-metric-value-w: calc(var(--p-body-size) * 6.8571);
+    --sp-metric-gap:     calc(var(--p-body-size) * 1.3714);
+    --sp-metric-pad:     calc(var(--p-body-size) * 0.6286 * var(--p-density));
+    --sp-quote-pad:      calc(var(--p-body-size) * 1.2571);
+    --sp-meta-mb:        calc(var(--p-body-size) * 0.6857);
+    --sp-meta-rule-w:    calc(var(--p-body-size) * 2.5143);
+    --sp-footer-pad:     calc(var(--p-body-size) * 1.2571 * var(--p-density));
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -225,12 +248,12 @@
     font-weight: 400;
     letter-spacing: 4px;
     color: color-mix(in srgb, var(--accent) var(--p-ink-tint-2), rgb(247 244 239 / 0.66));
-    margin-bottom: 12px;
+    margin-bottom: var(--sp-meta-mb);
   }
   .meta .rule {
-    width: 44px; height: 1px;
+    width: var(--sp-meta-rule-w); height: 1px;
     background: var(--accent);
-    margin-bottom: 12px;
+    margin-bottom: var(--sp-meta-mb);
   }
   .meta .latin {
     font-family: var(--p-didot);
@@ -251,15 +274,15 @@
   .section {
     grid-column: span 1;
     border-top: 1px solid var(--line);
-    padding: calc(22px * var(--p-density)) 0 calc(26px * var(--p-density));
+    padding: var(--sp-sec-pad-top) 0 var(--sp-sec-pad-bottom);
   }
   .section.span-full { grid-column: 1 / -1; }
 
   .sec-head {
     display: flex;
     align-items: baseline;
-    gap: 14px;
-    margin-bottom: calc(20px * var(--p-density));
+    gap: var(--sp-sec-head-gap);
+    margin-bottom: var(--sp-sec-head-mb);
   }
   .sec-no {
     font-family: var(--p-didot);
@@ -280,12 +303,12 @@
   .list-items {
     display: flex;
     flex-direction: column;
-    gap: calc(11px * var(--p-density));
+    gap: var(--sp-list-gap);
   }
   .list-item {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--sp-list-item-gap);
     font-size: var(--p-body-size);
     line-height: var(--p-body-leading);
     font-weight: 400;
@@ -294,8 +317,8 @@
   .list-item::before {
     content: '';
     flex: none;
-    width: 14px; height: 1px;
-    margin-top: 14px;
+    width: var(--sp-dash); height: 1px;
+    margin-top: var(--sp-dash);
     background: var(--accent);
   }
 
@@ -309,7 +332,7 @@
   }
   .tag-items .sep {
     color: var(--accent);
-    margin: 0 13px;
+    margin: 0 var(--sp-tag-sep-mx);
     font-family: var(--p-didot);
     font-style: italic;
   }
@@ -318,10 +341,10 @@
   .metric-items { display: flex; flex-direction: column; }
   .metric-row {
     display: grid;
-    grid-template-columns: 150px 1fr 120px;
+    grid-template-columns: var(--sp-metric-label-w) 1fr var(--sp-metric-value-w);
     align-items: center;
-    gap: 24px;
-    padding: calc(11px * var(--p-density)) 0;
+    gap: var(--sp-metric-gap);
+    padding: var(--sp-metric-pad) 0;
     border-bottom: 1px solid color-mix(in srgb, var(--accent) var(--p-ink-tint-2), rgba(245, 242, 237, 0.09));
   }
   .metric-row:last-child { border-bottom: none; }
@@ -357,7 +380,7 @@
     font-size: calc(var(--p-body-size) * 19 / 17.5);
     line-height: 1.9;
     color: var(--ink-1);
-    padding-left: 22px;
+    padding-left: var(--sp-quote-pad);
     border-left: 2px solid var(--accent);
   }
 
@@ -366,7 +389,7 @@
     position: relative;
     z-index: 1;
     border-top: 1px solid var(--line);
-    padding-top: calc(22px * var(--p-density));
+    padding-top: var(--sp-footer-pad);
     display: flex;
     align-items: baseline;
     justify-content: space-between;

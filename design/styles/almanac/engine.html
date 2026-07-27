@@ -44,12 +44,12 @@
     --p-serif-latin: 'Baskerville', 'PT Serif', 'Georgia', serif;
     --p-title-size: 64px;
     --p-title-tracking: 2px;
-    --p-subtitle-size: 20px;
-    --p-numeral-size: 22px;
-    --p-sec-title-size: 24px;
-    --p-body-size: 17px;
+    --p-subtitle-size: 31px;
+    --p-numeral-size: 36px;
+    --p-sec-title-size: 39px;
+    --p-body-size: 28px;
     --p-body-leading: 1.62;
-    --p-label-size: 14px;
+    --p-label-size: 21px;
 
     --p-grid-cols: 1fr 1fr;
     --p-column-gap: 52px;
@@ -80,6 +80,24 @@
     /* 线条不用纯墨色,掺纸色压淡,才像印上去的而不是贴上去的 */
     --rule-color: color-mix(in srgb, var(--ink) 62%, var(--paper));
     --hairline: color-mix(in srgb, var(--ink) 38%, var(--paper));
+  }
+
+  /* 章节区的间距锚定到 --p-body-size,不写 px 常量——理由与另两套风格引擎
+     头部注释相同:成品在手机上被缩到约 36%,间距若写死 px,一调字号版面比例
+     就散架。系数 = 引擎化前(bodySize 17px 时代)的原始 px 值 ÷ 17,故这次
+     把 bodySize 从 17 提到可读区间后,版面比例与提字号前逐位一致。 */
+  .sheet {
+    --sp-sec-pad-top:    calc(var(--p-body-size) * 1.5294 * var(--p-density));
+    --sp-sec-pad-bottom: calc(var(--p-body-size) * 1.4118 * var(--p-density));
+    --sp-sec-head-gap:   calc(var(--p-body-size) * 0.7059);
+    --sp-sec-head-mb:    calc(var(--p-body-size) * 0.9412 * var(--p-density));
+    --sp-list-gap:       calc(var(--p-body-size) * 0.5882 * var(--p-density));
+    --sp-list-item-gap:  calc(var(--p-body-size) * 0.5882);
+    --sp-tag-sep-mx:     calc(var(--p-body-size) * 0.7059);
+    --sp-metric-pad:     calc(var(--p-body-size) * 0.5294 * var(--p-density));
+    --sp-quote-pad:      calc(var(--p-body-size) * 1.1765);
+    --sp-colophon-mt:    calc(var(--p-body-size) * 0.5882 * var(--p-density));
+    --sp-colophon-pad:   calc(var(--p-body-size) * 0.8235 * var(--p-density));
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -256,7 +274,7 @@
   }
   .section {
     grid-column: span 1;
-    padding: calc(26px * var(--p-density)) 0 calc(24px * var(--p-density));
+    padding: var(--sp-sec-pad-top) 0 var(--sp-sec-pad-bottom);
     border-top: var(--p-rule-thin) solid var(--hairline);
   }
   .section.span-full { grid-column: 1 / -1; }
@@ -264,8 +282,8 @@
   .sec-head {
     display: flex;
     align-items: baseline;
-    gap: 12px;
-    margin-bottom: calc(16px * var(--p-density));
+    gap: var(--sp-sec-head-gap);
+    margin-bottom: var(--sp-sec-head-mb);
   }
   /* 罗马编号(E6) */
   .sec-no {
@@ -284,11 +302,11 @@
   }
 
   /* style: list —— 图鉴的条目用破折号起首,不用圆点 */
-  .list-items { display: flex; flex-direction: column; gap: calc(10px * var(--p-density)); }
+  .list-items { display: flex; flex-direction: column; gap: var(--sp-list-gap); }
   .list-item {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: var(--sp-list-item-gap);
     font-size: var(--p-body-size);
     line-height: var(--p-body-leading);
     color: var(--ink);
@@ -310,7 +328,7 @@
   }
   .tag-items .sep {
     color: var(--p-accent);
-    margin: 0 12px;
+    margin: 0 var(--sp-tag-sep-mx);
   }
 
   /* style: metric —— 图鉴的量表用点线连接,像目录页 */
@@ -320,7 +338,7 @@
     grid-template-columns: auto 1fr auto;
     align-items: baseline;
     gap: 10px;
-    padding: calc(9px * var(--p-density)) 0;
+    padding: var(--sp-metric-pad) 0;
     font-size: var(--p-body-size);
   }
   .metric-label { color: var(--ink); letter-spacing: 1px; }
@@ -350,7 +368,7 @@
     font-size: calc(var(--p-body-size) * 18 / 17);
     line-height: 1.85;
     color: var(--ink);
-    padding-left: 20px;
+    padding-left: var(--sp-quote-pad);
     border-left: var(--p-rule-thick) solid var(--p-accent);
   }
 
@@ -358,8 +376,8 @@
   .colophon {
     position: relative;
     z-index: 1;
-    margin-top: calc(10px * var(--p-density));
-    padding-top: calc(14px * var(--p-density));
+    margin-top: var(--sp-colophon-mt);
+    padding-top: var(--sp-colophon-pad);
     border-top: var(--p-rule-thin) solid var(--hairline);
     display: flex;
     align-items: baseline;
