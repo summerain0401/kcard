@@ -1,0 +1,80 @@
+{
+  "name": "verdant",
+  "displayName": "苔痕 · 时序",
+  "description": "苔绿主色斑配深青玻璃,是六版里最冷静的一版。章节串在一条竖线上顺序读下来,每块起首一枚 accent 圆点当节点,横向分隔线全部取消。适合有先后次序的选题:工艺流程、历史沿革、成长阶段。内容池取前 5 块——再多长宽比会滑出可用区间。本搭配钉死苔绿强调色 #5FA37A,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。",
+  "layout": "d-timeline",
+  "params": {
+    "scrim.hue": 168,
+    "scrim.saturation": 0.18,
+    "scrim.lightness": 0.06,
+    "orb.count": 3,
+    "orb.hueShifts": [
+      0,
+      -24,
+      150,
+      70
+    ],
+    "orb.saturations": [
+      0.78,
+      0.7,
+      0.05,
+      0.6
+    ],
+    "orb.lightnesses": [
+      0.46,
+      0.52,
+      0.93,
+      0.42
+    ],
+    "orb.sizes": [
+      740,
+      600,
+      460,
+      360
+    ],
+    "orb.blur": 40,
+    "orb.opacity": 0.8,
+    "glass.hue": 172,
+    "glass.saturation": 0.12,
+    "glass.lightness": 0.115,
+    "glass.opacity": 0.78,
+    "glass.blur": 50,
+    "glass.radius": 26,
+    "glass.edgeLight": 0.14,
+    "glass.borderAlpha": 0.13,
+    "glass.shadowY": 28,
+    "glass.shadowBlur": 66,
+    "glass.shadowAlpha": 0.52,
+    "glass.inset": 44,
+    "ink.hue": 172,
+    "ink.saturation": 0.08,
+    "ink.lightness": 0.94,
+    "ink.secondaryLightness": 0.62,
+    "palette.accent": "#5FA37A",
+    "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
+    "type.latin": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
+    "type.titleSize": 78,
+    "type.titleTracking": -1,
+    "type.titleWeight": 600,
+    "type.subtitleSize": 21,
+    "type.secTitleSize": 29,
+    "type.bodySize": 27,
+    "type.bodyLeading": 1.72,
+    "type.labelSize": 17,
+    "type.labelTracking": 3,
+    "layout.columns": 1,
+    "layout.blockLimit": 5,
+    "layout.columnGap": 44,
+    "layout.panelPadding": [
+      60,
+      58,
+      50
+    ],
+    "layout.headerHeight": 400,
+    "layout.heroSize": 300,
+    "layout.density": 0.95,
+    "layout.railSize": 50,
+    "chip.opacity": 0.1,
+    "chip.radius": 14
+  }
+}

@@ -119,14 +119,17 @@ def render_style_section(style):
         lines.append(f"| `{layout['name']}` | {layout['desc']} |")
     lines.append("")
 
+    # 骨架列是必须的:一套搭配 = 选骨架 + 定参数,不写出来生产部就得翻 presets/*.json
+    # 才知道某套配色配的是哪个版式。layout 字段 parse_presets() 早就取了,只是从前没渲染。
     lines.append("**搭配**")
     lines.append("")
-    lines.append("| 名称 | 说明 | 预览 |")
-    lines.append("|---|---|---|")
+    lines.append("| 名称 | 骨架 | 说明 | 预览 |")
+    lines.append("|---|---|---|---|")
     for preset in style["presets"]:
         preview_cell = (f"[{preset['preview']}](styles/{style['name']}/preview/{preset['preview']})"
                         if preset["preview"] else "(无)")
-        lines.append(f"| `{preset['name']}` · {preset['displayName']} | "
+        layout_cell = f"`{preset['layout']}`" if preset["layout"] else "(未指定)"
+        lines.append(f"| `{preset['name']}` · {preset['displayName']} | {layout_cell} | "
                      f"{preset['description']} | {preview_cell} |")
     lines.append("")
 

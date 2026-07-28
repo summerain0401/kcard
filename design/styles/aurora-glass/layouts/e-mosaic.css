@@ -1,0 +1,91 @@
+/* e-mosaic — 主体缩为角标,章节区碎成一组玻璃方片交错拼贴
+ *
+ * 唯一把章节做成**独立方片**的一版:每块自成一块小玻璃,浮在大面板上,
+ * 与标签胶囊、指标槽同材质不同厚度(宪法 E6)。分隔线取消——方片自带
+ * 边界,再画线就成了双重描边。
+ *
+ * 交错的规则不写死位置,而是按 block 类型分派:横向内容宽的(metric 的
+ * 指标条、text 的整段引文)跨满整行,短的(list / tags)排两栏。这样
+ * 换一张内容不同的卡,拼贴节奏会自己重排,而不是套死的模板。
+ * 这是 data-style 钩子的主要用武之地。
+ *
+ * 内容池取前 4 块:方片自带内边距,块数一多整版会胀得太长。
+ *
+ * 骨架负责头版元素定位、色斑落点、以及章节区的排布;
+ * 外观全部来自 engine.html。骨架管「块怎么摆」,引擎管「块长什么样」。
+ */
+
+/* 主体退到右上角当角标,把头版的主导权让给标题 */
+.hero-slot {
+  top: 0;
+  right: 0;
+  width: calc(var(--p-hero-size) * 0.62);
+  height: calc(var(--p-hero-size) * 0.62);
+}
+
+/* 标题组自下缘向上堆,紧贴导航片。
+   不用 top 从主体底部往下推:主体在本骨架被缩到 62%,而不变式
+   layout.heroSize <= layout.headerHeight - 80 校验的是**未缩放的**参数值,
+   headerHeight 因此被迫留得比实际需要的高。自下缘锚定可以把这段
+   多出来的余量甩到标题上方当留白,而不是在标题和导航片之间裂出一条空带。 */
+.head-title {
+  left: 0;
+  width: 62%;
+  bottom: calc(var(--p-rail-size) + 44px + var(--p-subtitle-size) * 1.7);
+}
+
+.head-sub {
+  left: 0;
+  width: 62%;
+  bottom: calc(var(--p-rail-size) + 38px);
+}
+
+.chapter-rail {
+  left: 0;
+  bottom: 0;
+  flex-direction: row;
+}
+
+/* ---- 色斑:四角散开,给拼贴一个不规则的底 ---- */
+.orb-1 { top: -240px; right: -180px; }
+.orb-2 { bottom: -220px; left: -200px; }
+.orb-3 { top: 120px; left: -260px; }
+.orb-4 { bottom: 180px; right: -220px; }
+
+/* ---- 章节区:玻璃方片交错拼贴 ---- */
+.grid {
+  grid-template-columns: 1fr 1fr;
+  row-gap: var(--p-column-gap);
+  /* dense 让被跨满块挤出的窄块回填空位,拼贴才不留洞 */
+  grid-auto-flow: dense;
+  align-items: start;
+}
+
+/* 每块自成一片玻璃。方片有自己的四边内边距,故引擎那套「上下内边距 +
+   顶部分隔线」的章节样式要整个换掉。 */
+.section {
+  border-top: none;
+  padding: var(--sp-sec-top) calc(var(--p-pad-x) * 0.5) var(--sp-sec-bottom);
+  background: var(--chip-fill);
+  border: 1px solid var(--hairline);
+  border-radius: var(--p-chip-radius);
+}
+
+/* 按类型分派跨度:宽内容跨满,短内容排两栏 */
+.section[data-style="metric"],
+.section[data-style="text"] {
+  grid-column: 1 / -1;
+}
+.section[data-style="list"],
+.section[data-style="tags"] {
+  grid-column: auto;
+}
+
+/* 内容层写死的 span:full 一律让位给上面的类型规则 */
+.section.span-full {
+  grid-column: auto;
+}
+.section.span-full[data-style="metric"],
+.section.span-full[data-style="text"] {
+  grid-column: 1 / -1;
+}

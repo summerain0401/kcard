@@ -1,7 +1,7 @@
 {
   "name": "ember",
   "displayName": "余烬 · 正统",
-  "description": "aurora-glass 的基准搭配。暖橙主色斑压左上、邻近色压右下、一颗近白自右上探入,暖炭玻璃面板居中承载全部文字。参数全部取 space.json 的 default,是其余搭配的起点。",
+  "description": "aurora-glass 的基准搭配,也是唯一不钉死强调色的一版——参数全部取 space.json 的 default(含 palette.accent: null),色斑色相随每张卡的主图/themeColor 走,是其余五版的起点。章节区单栏顺排,内容池取前 4 块。",
   "layout": "a-panel-split",
   "params": {
     "scrim.hue": 14,
@@ -63,6 +63,7 @@
     "type.labelSize": 18,
     "type.labelTracking": 3,
     "layout.columns": 1,
+    "layout.blockLimit": 4,
     "layout.columnGap": 44,
     "layout.panelPadding": [
       64,

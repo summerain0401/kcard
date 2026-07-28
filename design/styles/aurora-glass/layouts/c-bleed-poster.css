@@ -6,7 +6,11 @@
  * 色斑集中在左上那块留白里,让空的地方有光而不是有东西。
  * 适用:主体形态不规整、或想要一眼看上去更像海报而非卡片的选题。
  *
- * 骨架只负责头版区四个元素与色斑的定位。
+ * 章节区:首块跨满 + 其余两栏,但两栏是**不等宽**的(5:4),延续头版的
+ * 不对称。b 骨架用等宽两栏做对称,本骨架用不等宽两栏做失衡,两者刻意区分。
+ * 内容池取前 5 块。
+ *
+ * 骨架负责头版元素定位、色斑落点、以及章节区的排布;外观全部来自 engine.html。
  * 注意:出血靠 .panel 的 overflow:hidden 裁切,这是引擎给的,骨架不必也不应改。
  */
 
@@ -46,3 +50,26 @@
 .orb-2 { top: -180px; left: 420px; }           /* 邻近色,自顶缘探入中轴 */
 .orb-3 { top: 120px; left: -280px; }           /* 近白,自左缘探入 */
 .orb-4 { bottom: -240px; right: -160px; }      /* 远色,orb.count=4 时才出现 */
+
+/* ---- 章节区:首块跨满 + 其余不等宽两栏 ---- */
+.grid {
+  grid-template-columns: 5fr 4fr;
+}
+
+.section[data-i="0"] {
+  grid-column: 1 / -1;
+}
+
+/* 同 b 骨架:内容层的 span:full 交给骨架统一裁决,只有首块跨满 */
+.section.span-full {
+  grid-column: auto;
+}
+.section.span-full[data-i="0"] {
+  grid-column: 1 / -1;
+}
+
+/* 引文块落在窄栏里会挤成一条,让它无论排在第几位都独占整行。
+   这是 data-style 钩子的典型用法:按 block 类型排布,而不是按位置。 */
+.section[data-style="text"] {
+  grid-column: 1 / -1;
+}

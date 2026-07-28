@@ -1,0 +1,92 @@
+/* d-timeline — 主体压顶偏左,章节区串在一条竖线上,节点圆点标记每一块
+ *
+ * 六个骨架里唯一把章节区做成**线性叙事**的一版:左侧一条细竖线贯穿全部
+ * 章节,每块起首一枚 accent 圆点当节点。分隔线全部取消——顺序感由竖线
+ * 承担,不需要再画横线,两者并存会让版面像表格。
+ * 适用:有先后次序的选题(工艺流程、历史沿革、成长阶段),或单纯想要
+ * 一版「读下去」而非「扫一眼」的节奏。
+ *
+ * 内容池取满 6 块:线性结构越长越成立,短了反而看不出是时间线。
+ *
+ * 骨架负责头版元素定位、色斑落点、以及章节区的排布;
+ * 外观全部来自 engine.html。骨架管「块怎么摆」,引擎管「块长什么样」。
+ */
+
+.hero-slot {
+  top: 0;
+  left: 0;
+}
+
+/* 标题压在主体右侧偏下,与主体形成咬合而非并列 */
+.head-title {
+  left: calc(var(--p-hero-size) + 44px);
+  right: 0;
+  top: calc(var(--p-hero-size) * 0.42);
+}
+
+.head-sub {
+  left: calc(var(--p-hero-size) + 44px);
+  right: 0;
+  top: calc(var(--p-hero-size) * 0.42 + var(--p-title-size) * 1.34);
+}
+
+/* 导航片竖排贴右缘,与左下方的时间线竖线遥相呼应,一左一右两条竖轴 */
+.chapter-rail {
+  right: 0;
+  bottom: 0;
+  flex-direction: column;
+}
+
+/* ---- 色斑:沿左缘纵向铺开,呼应时间线的方向 ---- */
+.orb-1 { top: -260px; left: -220px; }
+.orb-2 { bottom: -200px; left: -180px; }
+.orb-3 { top: -180px; right: -120px; }
+.orb-4 { bottom: 30%; right: -240px; }
+
+/* ---- 章节区:单栏 + 左侧时间线 ---- */
+.grid {
+  grid-template-columns: 1fr;
+  position: relative;
+  /* 两个量决定整条时间线的几何,改这里即可整体平移 */
+  --rail-x: 13px;    /* 竖线距 grid 左缘 */
+  --rail-gap: 62px;  /* 正文距 grid 左缘 */
+  padding-left: var(--rail-gap);
+}
+
+/* 竖线。用 hairline 而非 accent:accent 在本风格只允许出现在四处
+   (编号/指标填充/导航首片/页脚圆点),一条贯穿全版的彩线会破坏 accent
+   的克制。节点圆点用 accent 就够了。 */
+.grid::before {
+  content: '';
+  position: absolute;
+  left: var(--rail-x);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--hairline);
+}
+
+/* 取消横向分隔线:顺序感交给竖线,两套分隔并存会读成表格 */
+.section {
+  position: relative;
+  border-top: none;
+}
+
+/* 节点圆点,压在竖线上。纵向对齐到章节标题的视觉中线——
+   用 --sp-sec-top(引擎里章节的上内边距)加半个标题字高推出来,
+   生产组调 type.secTitleSize 或 layout.density 时圆点会自己跟上。 */
+.section::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--rail-x) - var(--rail-gap) - 4px);
+  top: calc(var(--sp-sec-top) + var(--p-sec-title-size) * 0.34);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--p-accent);
+}
+
+/* 内容层写死的 span:full 在单栏下没有意义 */
+.section.span-full {
+  grid-column: auto;
+}

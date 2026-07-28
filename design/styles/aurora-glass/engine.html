@@ -520,7 +520,9 @@
     field.innerHTML = html;
   }
 
-  /* 章节导航片(E5):片数 = 章节数,上限 6 片。
+  /* 章节导航片(E5):片数 = **实际渲染的**章节数,上限 6 片。
+     传进来的必须是 blockLimit 切片之后的数组,不是 data.blocks 原始池子——
+     否则池子 6 块、只渲染 4 块时会出 6 片,导航指向不存在的章节。
      纯装饰但数据驱动——它反映的是这张卡真实的章节结构,不是随便摆几个方块。 */
   function renderRail(blocks) {
     const rail = document.getElementById('chapter-rail');
@@ -596,10 +598,26 @@
       heroSlot.innerHTML = `<div class="hero-mark">${esc(mark)}</div>`;
     }
 
-    renderRail(data.blocks);
+    /* 内容池模型:card.json 的 blocks 是池子(最多 6 块),骨架取前 N 块。
+       顺序即优先级——最重要的写在前面。切片之后的 blocks 是本次渲染的全部依据,
+       导航片(E5)也必须用它:用原始 data.blocks 会出 6 片却只有 4 个章节,
+       导航指向不存在的位置。 */
+    const limit = Number(params['layout.blockLimit'] ?? 4);
+    const blocks = (data.blocks || []).slice(0, limit);
 
-    document.getElementById('grid').innerHTML = (data.blocks || []).map((block, i) => `
-      <div class="section${block.span === 'full' ? ' span-full' : ''}">
+    renderRail(blocks);
+
+    /* 章节区的三个钩子,供 layouts/*.css 选中——引擎只负责输出,
+       用不用、怎么用由骨架决定(见 STYLE.md 第五节的职责线):
+         .grid[data-n]          实际渲染的块数,骨架据此切换网格
+         .section[data-i]       索引,骨架据此做逐块差异化
+         .section[data-style]   block 类型,骨架据此按类型排布
+       钩子只是属性,没有 CSS 选中时不影响任何渲染结果。 */
+    const grid = document.getElementById('grid');
+    grid.dataset.n = blocks.length;
+    grid.innerHTML = blocks.map((block, i) => `
+      <div class="section${block.span === 'full' ? ' span-full' : ''}"
+           data-i="${i}" data-style="${esc(block.style || 'list')}">
         <div class="sec-head">
           <span class="sec-no">${String(i + 1).padStart(2, '0')}</span>
           <span class="sec-title">${esc(block.title || '')}</span>

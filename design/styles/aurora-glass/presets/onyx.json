@@ -1,7 +1,7 @@
 {
   "name": "onyx",
   "displayName": "玄石 · 极简",
-  "description": "只留两团色斑——一团主色、一团近白,面板压到 0.9 不透明度并加大模糊撑住玻璃感。标题加粗到 700 且字距收到 -2,是三套里最紧、最暗、accent 面积最小的一版。适合需要压住场面的严肃选题。",
+  "description": "只留两团色斑——一团主色、一团近白,面板压到 0.9 不透明度并加大模糊撑住玻璃感。标题加粗到 700、字距收到 -3,是六版里最暗、accent 面积最小的一版。章节区首块跨满 + 其余不等宽两栏(5:4),延续头版的失衡;内容池取前 5 块。本搭配钉死玄紫强调色 #9B7BD4,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。",
   "layout": "c-bleed-poster",
   "params": {
     "scrim.hue": 260,
@@ -50,7 +50,7 @@
     "ink.saturation": 0.06,
     "ink.lightness": 0.93,
     "ink.secondaryLightness": 0.58,
-    "palette.accent": null,
+    "palette.accent": "#9B7BD4",
     "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
     "type.latin": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
     "type.titleSize": 96,
@@ -63,6 +63,7 @@
     "type.labelSize": 16,
     "type.labelTracking": 4,
     "layout.columns": 1,
+    "layout.blockLimit": 5,
     "layout.columnGap": 40,
     "layout.panelPadding": [
       56,

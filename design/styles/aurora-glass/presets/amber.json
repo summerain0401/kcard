@@ -1,0 +1,80 @@
+{
+  "name": "amber",
+  "displayName": "琥珀 · 拼贴",
+  "description": "琥珀金配深棕玻璃,章节碎成一组玻璃方片交错拼贴,是六版里唯一把章节做成独立方片的。跨度按 block 类型自动分派——指标条与引文跨满整行,列表与标签排两栏,换一张内容不同的卡拼贴节奏会自己重排。内容池取前 4 块,方片自带内边距,多了会胀。本搭配钉死琥珀强调色 #D9A441,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。",
+  "layout": "e-mosaic",
+  "params": {
+    "scrim.hue": 26,
+    "scrim.saturation": 0.2,
+    "scrim.lightness": 0.07,
+    "orb.count": 4,
+    "orb.hueShifts": [
+      0,
+      22,
+      -140,
+      -40
+    ],
+    "orb.saturations": [
+      0.9,
+      0.82,
+      0.06,
+      0.66
+    ],
+    "orb.lightnesses": [
+      0.5,
+      0.56,
+      0.94,
+      0.44
+    ],
+    "orb.sizes": [
+      700,
+      540,
+      440,
+      320
+    ],
+    "orb.blur": 0,
+    "orb.opacity": 0.88,
+    "glass.hue": 28,
+    "glass.saturation": 0.14,
+    "glass.lightness": 0.12,
+    "glass.opacity": 0.8,
+    "glass.blur": 46,
+    "glass.radius": 34,
+    "glass.edgeLight": 0.18,
+    "glass.borderAlpha": 0.15,
+    "glass.shadowY": 32,
+    "glass.shadowBlur": 74,
+    "glass.shadowAlpha": 0.55,
+    "glass.inset": 42,
+    "ink.hue": 28,
+    "ink.saturation": 0.1,
+    "ink.lightness": 0.95,
+    "ink.secondaryLightness": 0.64,
+    "palette.accent": "#D9A441",
+    "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
+    "type.latin": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
+    "type.titleSize": 82,
+    "type.titleTracking": -2,
+    "type.titleWeight": 600,
+    "type.subtitleSize": 21,
+    "type.secTitleSize": 28,
+    "type.bodySize": 26,
+    "type.bodyLeading": 1.66,
+    "type.labelSize": 17,
+    "type.labelTracking": 3,
+    "layout.columns": 2,
+    "layout.blockLimit": 4,
+    "layout.columnGap": 34,
+    "layout.panelPadding": [
+      58,
+      56,
+      50
+    ],
+    "layout.headerHeight": 380,
+    "layout.heroSize": 300,
+    "layout.density": 0.9,
+    "layout.railSize": 48,
+    "chip.opacity": 0.09,
+    "chip.radius": 20
+  }
+}

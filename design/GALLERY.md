@@ -12,7 +12,7 @@
 | 风格 | 版本 | 骨架 | 搭配 | 被哪些组使用 |
 |---|---|---|---|---|
 | [almanac](styles/almanac/) | 1.0.0 | 3 | 2 | `english-vocab` |
-| [aurora-glass](styles/aurora-glass/) | 1.0.0 | 3 | 3 | (暂无) |
+| [aurora-glass](styles/aurora-glass/) | 1.0.0 | 6 | 6 | (暂无) |
 | [editorial-mono](styles/editorial-mono/) | 1.0.0 | 3 | 3 | `food-encyclopedia` |
 
 「暂无组使用」是正常状态——设计部可以先囤方案,不必等生产需求。风格与生产组的新增彼此独立,详见 `PLAN.md` 第五节。
@@ -46,10 +46,10 @@
 
 **搭配**
 
-| 名称 | 说明 | 预览 |
-|---|---|---|
-| `field` · 田野 · 手记 | 对角构图的速写本气质:纸色更黄更旧、纸纹加重、暗角加深,版面收紧,标本推到右下角。适合松弛的手记感选题,或主体形态不规整、不宜端正陈列的素材。 | [field.png](styles/almanac/preview/field.png) |
-| `plate` · 图版 · 正统 | almanac 的基准搭配。米色纸、暖褐墨、居中标本、左右引线,最接近十九世纪图鉴正版的样子。参数全部取 space.json 的 default,是其余搭配的起点。 | [plate.png](styles/almanac/preview/plate.png) |
+| 名称 | 骨架 | 说明 | 预览 |
+|---|---|---|---|
+| `field` · 田野 · 手记 | `c-field-note` | 对角构图的速写本气质:纸色更黄更旧、纸纹加重、暗角加深,版面收紧,标本推到右下角。适合松弛的手记感选题,或主体形态不规整、不宜端正陈列的素材。 | [field.png](styles/almanac/preview/field.png) |
+| `plate` · 图版 · 正统 | `a-plate-center` | almanac 的基准搭配。米色纸、暖褐墨、居中标本、左右引线,最接近十九世纪图鉴正版的样子。参数全部取 space.json 的 default,是其余搭配的起点。 | [plate.png](styles/almanac/preview/plate.png) |
 
 ---
 
@@ -67,7 +67,7 @@
 | | |
 |---|---|
 | 版本 | 1.0.0 |
-| 可调维度 | 47 个(完整取值域见 `space.json`)|
+| 可调维度 | 48 个(完整取值域见 `space.json`)|
 | 硬约束 | 9 条(完整规则见 [STYLE.md](styles/aurora-glass/STYLE.md))|
 | 被哪些组使用 | (暂无) |
 
@@ -78,14 +78,20 @@
 | `a-panel-split` | 面板对半分:主体在左,标题在右,章节导航贴左缘 |
 | `b-panel-center` | 居中对称:主体压顶,标题居中,章节导航横排收底 |
 | `c-bleed-poster` | 主体贴右缘出血,标题压左下,大留白在左上 |
+| `d-timeline` | 主体压顶偏左,章节区串在一条竖线上,节点圆点标记每一块 |
+| `e-mosaic` | 主体缩为角标,章节区碎成一组玻璃方片交错拼贴 |
+| `f-index` | 无主体图,字母印记撑满头版,章节区排成目录式的左右两栏 |
 
 **搭配**
 
-| 名称 | 说明 | 预览 |
-|---|---|---|
-| `ember` · 余烬 · 正统 | aurora-glass 的基准搭配。暖橙主色斑压左上、邻近色压右下、一颗近白自右上探入,暖炭玻璃面板居中承载全部文字。参数全部取 space.json 的 default,是其余搭配的起点。 | [ember.png](styles/aurora-glass/preview/ember.png) |
-| `mist` · 雾岚 · 疏朗 | 把硬边色斑推到 120px 模糊,配冷蓝玻璃——光源退成一片雾,画面从产品页转向清晨的窗。面板更透、内缩更深,让色斑有更多露脸的余地。b 骨架把主体与文字竖着摞成一列,故三套里它最长,选题信息量要相应压到 3 章以内。 | [mist.png](styles/aurora-glass/preview/mist.png) |
-| `onyx` · 玄石 · 极简 | 只留两团色斑——一团主色、一团近白,面板压到 0.9 不透明度并加大模糊撑住玻璃感。标题加粗到 700 且字距收到 -2,是三套里最紧、最暗、accent 面积最小的一版。适合需要压住场面的严肃选题。 | [onyx.png](styles/aurora-glass/preview/onyx.png) |
+| 名称 | 骨架 | 说明 | 预览 |
+|---|---|---|---|
+| `amber` · 琥珀 · 拼贴 | `e-mosaic` | 琥珀金配深棕玻璃,章节碎成一组玻璃方片交错拼贴,是六版里唯一把章节做成独立方片的。跨度按 block 类型自动分派——指标条与引文跨满整行,列表与标签排两栏,换一张内容不同的卡拼贴节奏会自己重排。内容池取前 4 块,方片自带内边距,多了会胀。本搭配钉死琥珀强调色 #D9A441,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [amber.png](styles/aurora-glass/preview/amber.png) |
+| `ember` · 余烬 · 正统 | `a-panel-split` | aurora-glass 的基准搭配,也是唯一不钉死强调色的一版——参数全部取 space.json 的 default(含 palette.accent: null),色斑色相随每张卡的主图/themeColor 走,是其余五版的起点。章节区单栏顺排,内容池取前 4 块。 | [ember.png](styles/aurora-glass/preview/ember.png) |
+| `mist` · 雾岚 · 疏朗 | `b-panel-center` | 把硬边色斑推到 120px 模糊,配冷蓝玻璃——光源退成一片雾,画面从产品页转向清晨的窗。面板更透、内缩更深,让色斑有更多露脸的余地。章节区两栏对称、首块跨满,与居中对称的头版呼应;内容池取前 5 块。本搭配钉死冷蓝强调色 #6FA8D6,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [mist.png](styles/aurora-glass/preview/mist.png) |
+| `onyx` · 玄石 · 极简 | `c-bleed-poster` | 只留两团色斑——一团主色、一团近白,面板压到 0.9 不透明度并加大模糊撑住玻璃感。标题加粗到 700、字距收到 -3,是六版里最暗、accent 面积最小的一版。章节区首块跨满 + 其余不等宽两栏(5:4),延续头版的失衡;内容池取前 5 块。本搭配钉死玄紫强调色 #9B7BD4,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [onyx.png](styles/aurora-glass/preview/onyx.png) |
+| `quartz` · 石英 · 索引 | `f-index` | 玫瑰灰配近中性玻璃,六版里最素的一版。头版不放主体图,字母印记扶正当主角,整版不依赖任何素材;章节排成目录式左右两栏,内容池取满 6 块。长宽比 1:2.33 是六版里最长的,成立前提是本骨架专供「无主图、纯文字、预期滑动阅读」的选题。本搭配钉死玫瑰灰强调色 #C98A93,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [quartz.png](styles/aurora-glass/preview/quartz.png) |
+| `verdant` · 苔痕 · 时序 | `d-timeline` | 苔绿主色斑配深青玻璃,是六版里最冷静的一版。章节串在一条竖线上顺序读下来,每块起首一枚 accent 圆点当节点,横向分隔线全部取消。适合有先后次序的选题:工艺流程、历史沿革、成长阶段。内容池取前 5 块——再多长宽比会滑出可用区间。本搭配钉死苔绿强调色 #5FA37A,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [verdant.png](styles/aurora-glass/preview/verdant.png) |
 
 ---
 
@@ -112,9 +118,9 @@
 
 **搭配**
 
-| 名称 | 说明 | 预览 |
-|---|---|---|
-| `airy` · 疏朗 · 单栏长卷 | 单栏竖排,字号放大、行距拉开、留白加厚,噪点压到几乎不可见。适合内容条目少但每条较长、希望从容阅读的选题。卡片会明显变高,适配长图分享场景。 | [airy.png](styles/editorial-mono/preview/airy.png) |
-| `classic` · 经典 · 标题主导 | editorial-mono 的基准搭配,等同 2026-07-27 引擎化之前的原始视觉。竖排宋体标题占主导,主体居中偏右,巨字压右上角。参数全部取 space.json 的 default,是其余搭配的起点与像素基准。 | [classic.png](styles/editorial-mono/preview/classic.png) |
-| `stark` · 冷峻 · 主体出血 | 主体放大出血到右上角,底色压得更深更中性,噪点关闭,accent 微染收到最低,行距收紧。对比最强、最锋利的一版。适合质感精良的主图素材,以及希望画面压过文字的选题。 | [stark.png](styles/editorial-mono/preview/stark.png) |
+| 名称 | 骨架 | 说明 | 预览 |
+|---|---|---|---|
+| `airy` · 疏朗 · 单栏长卷 | `a-title-left` | 单栏竖排,字号放大、行距拉开、留白加厚,噪点压到几乎不可见。适合内容条目少但每条较长、希望从容阅读的选题。卡片会明显变高,适配长图分享场景。 | [airy.png](styles/editorial-mono/preview/airy.png) |
+| `classic` · 经典 · 标题主导 | `a-title-left` | editorial-mono 的基准搭配,等同 2026-07-27 引擎化之前的原始视觉。竖排宋体标题占主导,主体居中偏右,巨字压右上角。参数全部取 space.json 的 default,是其余搭配的起点与像素基准。 | [classic.png](styles/editorial-mono/preview/classic.png) |
+| `stark` · 冷峻 · 主体出血 | `c-hero-bleed` | 主体放大出血到右上角,底色压得更深更中性,噪点关闭,accent 微染收到最低,行距收紧。对比最强、最锋利的一版。适合质感精良的主图素材,以及希望画面压过文字的选题。 | [stark.png](styles/editorial-mono/preview/stark.png) |
 

@@ -1,0 +1,77 @@
+/* f-index — 无主体图,字母印记撑满头版,章节区排成目录式的左右两栏
+ *
+ * 唯一把**章节内部**也重排的一版:其余五个骨架都只管块与块之间怎么摆,
+ * 本骨架把每一块自身拆成左右两列——编号与标题在左,正文在右,像工具书的
+ * 目录页或术语表。实现上不改 DOM,只是把 .section 变成二维网格,
+ * 引擎输出的 .sec-head 自然落进第一列、块正文落进第二列。
+ *
+ * 头版刻意不放主体图:字母印记(宪法 E7)本来是缺图兜底,这里把它扶正成
+ * 主角,整版因此不依赖任何素材——没有 hero 图的选题也能出一版体面的卡。
+ *
+ * 内容池取满 6 块:目录式一行一块,纵向紧凑,装得下。
+ *
+ * 骨架负责头版元素定位、色斑落点、以及章节区的排布;
+ * 外观全部来自 engine.html。骨架管「块怎么摆」,引擎管「块长什么样」。
+ */
+
+/* 字母印记撑满头版右半。有 hero 图的卡在这里会显得过大——
+   本骨架的适用前提就是「不配图」,选它即接受这一点。 */
+.hero-slot {
+  top: 50%;
+  right: -6%;
+  transform: translateY(-50%);
+  width: calc(var(--p-hero-size) * 1.25);
+  height: calc(var(--p-hero-size) * 1.25);
+}
+
+.head-title {
+  left: 0;
+  width: 58%;
+  bottom: calc(var(--p-title-size) * 1.5);
+}
+
+.head-sub {
+  left: 0;
+  width: 58%;
+  bottom: calc(var(--p-title-size) * 0.72);
+}
+
+/* 导航片横排收在头版底缘,与下方目录的左对齐线同一条 */
+.chapter-rail {
+  left: 0;
+  bottom: 0;
+  flex-direction: row;
+}
+
+/* ---- 色斑:大面积压住右半,给字母印记一个发光的底 ---- */
+.orb-1 { top: -200px; right: -140px; }
+.orb-2 { bottom: -260px; right: 60px; }
+.orb-3 { top: -160px; left: -240px; }
+.orb-4 { bottom: -180px; left: -200px; }
+
+/* ---- 章节区:目录式左右两栏 ---- */
+.grid {
+  grid-template-columns: 1fr;
+}
+
+/* 每块自身拆成两列:sec-head 落左、块正文落右。
+   左列定宽,让全部章节的标题与正文各自对齐成两条竖线——
+   目录页的秩序感全靠这两条线。 */
+.section {
+  display: grid;
+  grid-template-columns: 30% 1fr;
+  column-gap: var(--p-column-gap);
+  align-items: start;
+}
+
+/* 编号与标题在左列里改为上下叠放:横排会把定宽的左列撑爆 */
+.sec-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--sp-sec-head-gap) * 0.5);
+  margin-bottom: 0;
+}
+
+.section.span-full {
+  grid-column: auto;
+}

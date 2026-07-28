@@ -395,6 +395,17 @@
       "scope": "production",
       "why": "章节网格栏数。span:full 的块始终占满整行"
     },
+    "layout.blockLimit": {
+      "default": 4,
+      "values": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "scope": "production",
+      "why": "本骨架渲染内容池里的前几块。card.json 的 blocks 是内容池而非渲染清单——可写满 6 块,不同骨架各取所需:疏朗的骨架取 3-4 块压住长宽比,两栏/拼贴类骨架容得下 5-6 块。顺序即优先级,取的是前 N 块。取值域上限 6 即内容池的容量上限:写超过 6 块不会被任何骨架取到"
+    },
     "layout.columnGap": {
       "default": 44,
       "range": [
