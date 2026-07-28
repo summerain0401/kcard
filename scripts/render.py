@@ -300,10 +300,17 @@ def render_on_page(browser, engine_path, layout_path, data, params, out_path):
         page.evaluate("document.fonts.ready")
         if info.get("overflow"):
             page.close()
+            # info['page'] 才是引擎实际报告溢出的那一页,不一定等于本次请求
+            # 的 n——分页方案是每次调用都从头整体重算的(见 engine.html
+            # buildPagingPlan 的注释),第 1 页那次调用建方案时若在后面某页
+            # 探测到溢出,会在那次调用里就直接报出来,此时 n=1 但溢出的是别页。
+            overflow_page = info.get("page", n)
+            block_note = (f",第 {info['overflowBlockIndex']} 块单独超高"
+                          if info.get("overflowBlockIndex") is not None else "")
             raise RenderOverflow(
-                f"{out_path.stem} 第 {n} 页内容溢出画布:内容高 "
+                f"{out_path.stem} 第 {overflow_page} 页内容溢出画布:内容高 "
                 f"{info.get('contentHeight')}px > 画布 {info.get('canvasHeight')}px"
-                f"(共 {info.get('pages')} 页)")
+                f"(共 {info.get('pages')} 页{block_note})")
         return info
 
     info = render_page_n(1)

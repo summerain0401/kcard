@@ -286,15 +286,21 @@
     -webkit-text-stroke: 1px hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / 0.22);
   }
 
-  /* 章节导航片(E5):一列/一排小玻璃方片,方向由骨架给 flex-direction */
+  /* 章节导航片(E5):一列/一排小玻璃方片,方向由骨架给 flex-direction。
+     片的实际尺寸走 --p-rail-cell,不直接用 --p-rail-size——分页模式下
+     renderRail() 会按页数把 --p-rail-cell 收缩到比 --p-rail-size 更小
+     (page 一多,固定尺寸的片会撑爆头版,见 STYLE.md)。--p-rail-size 本身
+     仍是"期望"尺寸,并保留给骨架 CSS 做主体/标题的避让间距计算(未收缩)。
+     长图模式的 renderRailSections() 从不设置 --p-rail-cell,var() 的第二参数
+     兜底回 --p-rail-size——与改造前完全等价,这也是不用改那个函数的原因。 */
   .chapter-rail {
     position: absolute;
     display: flex;
-    gap: calc(var(--p-rail-size) * 0.27);
+    gap: calc(var(--p-rail-cell, var(--p-rail-size)) * 0.27);
   }
   .rail-cell {
-    width: var(--p-rail-size);
-    height: var(--p-rail-size);
+    width: var(--p-rail-cell, var(--p-rail-size));
+    height: var(--p-rail-cell, var(--p-rail-size));
     flex: none;
     display: flex;
     align-items: center;
@@ -304,7 +310,7 @@
     background: var(--chip-fill);
     font-family: var(--p-latin);
     /* 0.40 而非更小的比例:导航片里的编号也是字,同样要扛住手机上 36% 的缩放 */
-    font-size: calc(var(--p-rail-size) * 0.4);
+    font-size: calc(var(--p-rail-cell, var(--p-rail-size)) * 0.4);
     letter-spacing: 0.5px;
     color: var(--ink-2);
   }
@@ -603,11 +609,24 @@
     rail.innerHTML = html;
   }
 
-  function renderRailPages(current, total) {
+  /* 分页模式专用的导航片渲染,片数=总页数,不再像 renderRailSections() 那样
+     封顶 6——块数上限撤销后(2026-07-28)总页数不设上限,故这里改成自适应
+     收缩片尺寸而不是砍片数(截断会让"你在第几张"这条信息本身失真)。 */
+  function renderRail(current, total, desiredCellSize) {
     const rail = document.getElementById('chapter-rail');
-    const cells = Math.min(total, 6);
+    // 可用长度取 .head 的对应边:.head 没有任何骨架给它设 width/display,
+    // 恒等于面板内容区,横排取宽、竖排取高,六个骨架通用,不必逐个骨架指定。
+    const head = document.querySelector('.head');
+    const dir = getComputedStyle(rail).flexDirection;
+    const avail = dir === 'column' ? head.clientHeight : head.clientWidth;
+
+    // gap 与片同步收缩(0.27 倍率不变):解 size*n + size*0.27*(n-1) <= avail
+    const fit = avail / (total + 0.27 * (total - 1));
+    const cellSize = Math.max(1, Math.min(desiredCellSize, fit));
+    document.documentElement.style.setProperty('--p-rail-cell', px(cellSize));
+
     let html = '';
-    for (let i = 0; i < cells; i++) {
+    for (let i = 0; i < total; i++) {
       const p = i + 1;
       html += `<div class="rail-cell${p === current ? ' is-current' : ''}">` +
               `${String(p).padStart(2, '0')}</div>`;
@@ -686,55 +705,68 @@
       heroSlot.innerHTML = `<div class="hero-mark">${esc(mark)}</div>`;
     }
 
-    /* 内容池:最多 6 块,顺序即优先级,最重要的写在前面。
-       长图模式按 layout.blockLimit 直接取前 N 块(改造前的行为);
-       分页模式按 layout.coverBlocks / layout.blocksPerPage 分配到各页——
-       封面页取池头 coverBlocks 块,续页依次各取 blocksPerPage 块。
-       startIndex 同时驱动 data-i 与 sec-no:章节编号是全局连续的
+    /* 内容池:顺序即优先级,最重要的写在前面。2026-07-28 起取消 6 块硬上限
+       (见 STYLE.md 4.3)——长图分支自己的 layout.blockLimit 取值域本就 ≤6,
+       不受影响;分页分支下块数不再决定"塞不塞得下",只决定"出几张图"。
+       startIndex 同时驱动 data-i 与 sec-no:章节编号全局连续
        (页二接着页一的编号往下排),不是每页各自从 01 重新数,
-       这样轮播读起来像一份连续的文档,不是三份互不相干的片段。 */
-    const pool = (data.blocks || []).slice(0, 6);
+       这样轮播读起来像一份连续的文档,不是互不相干的片段。 */
+    const pool = data.blocks || [];
     const canvasHeight = Number(params['canvas.height']) || 0;
     const stage = document.getElementById('stage');
+    const grid = document.getElementById('grid');
 
-    let blocks, role, totalPages, startIndex;
     if (!canvasHeight) {
+      /* 长图分支:改造前的行为原样保留,不接自动断页(那是分页分支专属)。 */
       const limit = Number(params['layout.blockLimit'] ?? 4);
-      blocks = pool.slice(0, limit);
-      role = 'cover';
-      totalPages = 1;
-      startIndex = 0;
+      const blocks = pool.slice(0, limit);
+      stage.dataset.page = 1;
+      stage.dataset.role = 'cover';
       renderRailSections(blocks);
-    } else {
-      const coverN = Number(params['layout.coverBlocks'] ?? 2);
-      const perPage = Number(params['layout.blocksPerPage'] ?? 2);
-      const remain = Math.max(0, pool.length - coverN);
-      totalPages = 1 + Math.ceil(remain / perPage);
-      if (pageNum <= 1) {
-        startIndex = 0;
-        blocks = pool.slice(0, coverN);
-        role = 'cover';
-      } else {
-        startIndex = coverN + (pageNum - 2) * perPage;
-        blocks = pool.slice(startIndex, startIndex + perPage);
-        role = 'cont';
-      }
-      renderRailPages(Math.min(pageNum, totalPages), totalPages);
+      commitBlocks(pool, 0, blocks.length, grid);
+      return { page: 1, pages: 1, overflow: false };
     }
 
-    /* .stage 的两个新钩子:data-role 供骨架决定续页要不要隐藏主体图、
-       挪页码条位置(见 STYLE.md 第五节);data-page 目前无骨架消费,
-       为将来"每页构图各自不同"(而不仅是 cover/cont 二分)预留。 */
-    stage.dataset.page = pageNum;
-    stage.dataset.role = role;
+    /* 分页分支:引擎自己量每页能装几块,不再由 coverBlocks/blocksPerPage
+       这类手调旋钮决定(STYLE.md 4.3)。每次 renderCard() 调用都从头重算
+       一遍这份方案(不缓存)——render.py 对每一页各起一次独立的 evaluate()
+       调用,互不共享状态,必须能仅从 (data, params) 复原出同一份方案。 */
+    const panel = stage.querySelector('.panel');
+    const { plan, overflow } = buildPagingPlan(pool, canvasHeight, stage, grid, panel);
 
-    /* 章节区的三个钩子,供 layouts/*.css 选中——引擎只负责输出,
-       用不用、怎么用由骨架决定(见 STYLE.md 第五节的职责线):
-         .grid[data-n]          本页实际渲染的块数,骨架据此切换网格
-         .section[data-i]       内容池里的全局索引,骨架据此做逐块差异化
-         .section[data-style]   block 类型,骨架据此按类型排布
-       钩子只是属性,没有 CSS 选中时不影响任何渲染结果。 */
-    const grid = document.getElementById('grid');
+    if (overflow) {
+      stage.dataset.page = overflow.page;
+      stage.dataset.role = overflow.page === 1 ? 'cover' : 'cont';
+      return { page: overflow.page, pages: plan.length, overflow: true,
+               contentHeight: overflow.bottom, canvasHeight,
+               overflowBlockIndex: overflow.blockIndex };
+    }
+
+    const totalPages = plan.length;
+    const target = plan[Math.min(pageNum, totalPages) - 1];
+
+    stage.dataset.page = pageNum;
+    stage.dataset.role = target.role;
+    renderRail(Math.min(pageNum, totalPages), totalPages,
+               Number(params['layout.railSize'] ?? 56));
+    commitBlocks(pool, target.startIndex, target.count, grid);
+
+    /* 溢出测量沿用改造前的口径:量 .panel 底边相对画布顶部(= 视口顶部,
+       .stage 无外边距)的距离,不拿某个 inset 参数去反推——用几何位置
+       直接判断,任何骨架改了 .panel 的盒模型都不会让这条检测失真。
+       此处不会真的溢出(buildPagingPlan 已经保证选中的方案装得下),
+       测出来只是如实报给 render.py,契约不变。 */
+    const bottom = Math.round(panel.getBoundingClientRect().bottom);
+    return { page: pageNum, pages: totalPages, overflow: false,
+             contentHeight: bottom, canvasHeight };
+  }
+
+  /* 把内容池的 [startIndex, startIndex+count) 一段写进 #grid,
+     包含 data-i/data-style 钩子与全局连续编号。分页分支既用它做
+     "探测某个块数装不装得下"的临时渲染,也用它做最终定案的渲染——
+     两处必须是同一份逻辑,否则探测阶段"装得下"的判断和实际出图会对不上。 */
+  function commitBlocks(pool, startIndex, count, grid) {
+    const blocks = pool.slice(startIndex, startIndex + count);
     grid.dataset.n = blocks.length;
     grid.innerHTML = blocks.map((block, i) => `
       <div class="section${block.span === 'full' ? ' span-full' : ''}"
@@ -745,17 +777,75 @@
         </div>
         ${renderBlockBody(block)}
       </div>`).join('');
+    return blocks;
+  }
 
-    if (!canvasHeight) return { page: 1, pages: 1, overflow: false };
+  /* 分页方案:量→装→平衡。
+     量/装 —— 每页从 startIndex 起贪心加块,加一块就实际渲染一次、量
+       .panel 底边是否超出画布,超了就回退到上一个装得下的块数,翻页。
+       用真实渲染测量而不是在 JS 里重算网格打包,是因为两栏/不等宽栏/
+       dense 回填/逐块跨度这些排布规则全在 CSS 里,JS 重算一遍等于把
+       六个骨架的排布逻辑抄一遍,还随时可能抄漏。
+     平衡 —— 末页只剩 1 块、且前一页 ≥3 块时,尝试从前一页借一块过来
+       消灭孤儿页;是否真的够装依然靠实际渲染测量,不是拍脑袋加一块。 */
+  function buildPagingPlan(pool, canvasHeight, stage, grid, panel) {
+    const plan = [];
+    if (pool.length === 0) {
+      // 零块也要出一张封面(头版本身仍要渲染),维持改造前的行为
+      plan.push({ role: 'cover', startIndex: 0, count: 0 });
+      return { plan, overflow: null };
+    }
 
-    /* 溢出测量:量 .panel 底边相对画布顶部(= 视口顶部,.stage 无外边距)
-       的距离,而不是拿某个 inset 参数去反推——用几何位置直接判断,
-       任何骨架改了 .panel 的盒模型都不会让这条检测失真。 */
-    const panel = stage.querySelector('.panel');
+    let startIndex = 0;
+    let pageN = 0;
+    while (startIndex < pool.length) {
+      pageN += 1;
+      const role = pageN === 1 ? 'cover' : 'cont';
+      stage.dataset.role = role; // 影响 .head 的高度(封面/续页不同),须先于测量设置
+
+      let k = 0;
+      while (startIndex + k < pool.length) {
+        const tryK = k + 1;
+        commitBlocks(pool, startIndex, tryK, grid);
+        const bottom = Math.round(panel.getBoundingClientRect().bottom);
+        if (bottom > canvasHeight + 0.5) {
+          if (tryK === 1) {
+            // 单独一块自己就比一页高,不是"装不下就翻页"能解的问题(H10)
+            return { plan, overflow: { page: pageN, blockIndex: startIndex, bottom } };
+          }
+          commitBlocks(pool, startIndex, k, grid); // 回退到上一个可行状态
+          break;
+        }
+        k = tryK;
+      }
+      plan.push({ role, startIndex, count: k });
+      startIndex += k;
+    }
+
+    balanceOrphanPage(plan, pool, canvasHeight, stage, grid, panel);
+    return { plan, overflow: null };
+  }
+
+  function balanceOrphanPage(plan, pool, canvasHeight, stage, grid, panel) {
+    if (plan.length < 2) return;
+    const last = plan[plan.length - 1];
+    const prev = plan[plan.length - 2];
+    if (last.count !== 1 || prev.count < 3) return;
+
+    // 借块后是否仍装得下,不能假设——实际渲染测一次才作数
+    const candidateStart = last.startIndex - 1;
+    const candidateCount = last.count + 1;
+    stage.dataset.role = last.role;
+    commitBlocks(pool, candidateStart, candidateCount, grid);
     const bottom = Math.round(panel.getBoundingClientRect().bottom);
-    const overflow = bottom > canvasHeight + 0.5;
-    return { page: pageNum, pages: totalPages, overflow,
-             contentHeight: bottom, canvasHeight };
+    if (bottom <= canvasHeight + 0.5) {
+      prev.count -= 1;
+      last.startIndex = candidateStart;
+      last.count = candidateCount;
+    }
+    // 探测态是否被采纳都无妨:buildPagingPlan 返回后,调用方会按最终方案
+    // 对请求页重新 commitBlocks 一次,这里留在 DOM 里的中间状态
+    // 不会泄漏到最终输出。
   }
 
   window.renderCard = renderCard;

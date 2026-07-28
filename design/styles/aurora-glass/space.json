@@ -478,26 +478,7 @@
       ],
       "unit": "px",
       "scope": "production",
-      "why": "画布固定高度。留空(null)= 长图,高度随内容自适应,render.py 用 full_page 截图(现状)。非空 = 分页轮播模式:画布定高不再自适应,render.py 改用视口截图,按 layout.coverBlocks/blocksPerPage 把内容池切成多张 output-NN.png。1080×1440(3:4)是当前唯一验证过的取值,写给小红书/视频号这类图文轮播场景"
-    },
-    "layout.coverBlocks": {
-      "default": 2,
-      "values": [
-        1,
-        2,
-        3
-      ],
-      "scope": "production",
-      "why": "封面页(第 1 页)放内容池的前几块。仅 canvas.height 非空时生效"
-    },
-    "layout.blocksPerPage": {
-      "default": 2,
-      "values": [
-        2,
-        3
-      ],
-      "scope": "production",
-      "why": "续页(第 2 页起)每页放几块。仅 canvas.height 非空时生效"
+      "why": "画布固定高度。留空(null)= 长图,高度随内容自适应,render.py 用 full_page 截图(现状)。非空 = 分页轮播模式:画布定高不再自适应,render.py 改用视口截图,按引擎自动断页(量每页实际能装几块,见 engine.html 的 buildPagingPlan)把内容池切成多张 output-NN.png。1080×1440(3:4)是当前唯一验证过的取值,写给小红书/视频号这类图文轮播场景"
     },
     "layout.contHeaderHeight": {
       "default": 180,
@@ -601,10 +582,6 @@
     {
       "rule": "chip.opacity > 0.18 => glass.borderAlpha <= 0.2",
       "why": "小元件提亮偏高时描边须收敛,否则每个胶囊都变成高对比方框,面板碎成一堆小卡片"
-    },
-    {
-      "rule": "layout.coverBlocks + layout.blocksPerPage * 2 >= 6",
-      "why": "分页模式的容量下限:内容池上限 6 块,3 页(1 封面 + 2 续页)必须装得完,否则第 4 页无处安放而 render.py 也不会自动开第 4 页。写成加法而非 ceil() 是刻意避开——style-check.py 的表达式白名单只有 min/max/isAscending/contrastHSL,不为这一条单独扩表达式语法。canvas.height 为 null 时(非分页)本条恒真,不影响长图骨架"
     }
   ]
 }

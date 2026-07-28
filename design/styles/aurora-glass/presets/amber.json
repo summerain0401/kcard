@@ -65,8 +65,6 @@
     "layout.density": 0.9,
     "layout.railSize": 48,
     "canvas.height": 1440,
-    "layout.coverBlocks": 3,
-    "layout.blocksPerPage": 3,
     "chip.opacity": 0.09,
     "chip.radius": 20
   }
