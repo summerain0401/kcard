@@ -9,7 +9,12 @@
  * 换一张内容不同的卡,拼贴节奏会自己重排,而不是套死的模板。
  * 这是 data-style 钩子的主要用武之地。
  *
- * 内容池取前 4 块:方片自带内边距,块数一多整版会胀得太长。
+ * 2026-07-28 起本骨架是画布固定 3:4 的分页试点之一(另一个是
+ * c-bleed-poster)。内容池 6 块按 layout.coverBlocks/blocksPerPage 分页,
+ * 搭配 amber 取 封面 3 + 续页 3 = 2 张图。选它是因为固定开销全六骨架里
+ * 最小——试点优先挑容错空间最大的。
+ * 每页 3 块而非 2 块是实测定的:1440 高的画布上两块撑不满章节区,
+ * 剩下的高度会变成一大片死白(详见 STYLE.md 5.3)。
  *
  * 骨架负责头版元素定位、色斑落点、以及章节区的排布;
  * 外观全部来自 engine.html。骨架管「块怎么摆」,引擎管「块长什么样」。
@@ -88,4 +93,29 @@
 .section.span-full[data-style="metric"],
 .section.span-full[data-style="text"] {
   grid-column: 1 / -1;
+}
+
+/* ---- 续页(第 2 张起):去掉主体图,方片改单栏纵向铺满 ----
+   头版高度收缩、标题字号缩放、章节区吃掉剩余高度并均分,这些由
+   engine.html 的 [data-role="cont"] 通用规则处理。这里做本骨架特有的两件事:
+
+   1. 隐藏角标主体,把空出的宽度还给标题。
+   2. **两栏改单栏**——这是续页不难看的关键。封面用两栏是为了给右上角的
+      主体让位;续页主体没了还并排,两块内容只占一行 ~410px,而章节区有
+      ~1036px 可用,竖向直接废掉六成。改单栏后两块各占满一行宽度、
+      纵向均分,方片从"飘在左上角的两个小块"变成"撑住整版的两个面"。 */
+.stage[data-role="cont"] .hero-slot {
+  display: none;
+}
+.stage[data-role="cont"] .head-title,
+.stage[data-role="cont"] .head-sub {
+  width: 100%;
+}
+.stage[data-role="cont"] .grid {
+  grid-template-columns: 1fr;
+}
+/* 单栏下按类型分派跨度已无意义(每块都占满整行),显式归位免得
+   封面那套 metric/text 跨满规则在续页产生多余的特异度竞争。 */
+.stage[data-role="cont"] .section {
+  grid-column: auto;
 }

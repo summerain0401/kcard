@@ -20,9 +20,14 @@ accent 优先级:params["palette.accent"](组级固定色)> card.json 的 themeC
 > 从 hero 图自动取色。
 
 风格约定:
-- design/styles/<name>/engine.html 必须挂载 window.renderCard(data, params)
-- engine.html 内通过 CSS 自行定义画布尺寸(如 .stage 的 width/min-height),
-  render.py 用 full_page 截图,不强行指定 viewport 高度
+- design/styles/<name>/engine.html 必须挂载 window.renderCard(data, params, pageNum?)
+- 默认(params 未声明 canvas.height,或声明为 null)是长图模式:engine.html 通过
+  CSS 自行定义画布尺寸(如 .stage 的 width/min-height),render.py 用 full_page
+  截图,不强行指定 viewport 高度。<card_dir>/output.png 只有一张
+- canvas.height 非空则是分页模式(目前仅 aurora-glass 的部分骨架支持):
+  画布定高,render.py 改用视口截图,按 renderCard() 返回的 pages 循环出图,
+  写成 output-01.png / output-02.png / ...;内容溢出画布直接抛 RenderOverflow,
+  不静默裁切
 - 头版定位不在 engine.html 里,由 layouts/<layout>.css 提供,渲染时注入
 - data 中约定的图片字段(如 "hero")若是 <card_dir> 内的相对文件名且文件存在,
   render.py 会自动换成 file:// 绝对 URI 再传给引擎;不存在则原样传入,
@@ -41,9 +46,36 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 STYLES_DIR = PROJECT_ROOT / "design" / "styles"
 
 # 与 design/styles/*/engine.html 里 body/.stage 的 width 保持一致(目前各风格均为 1080)。
-# height 只是 viewport 占位值,full_page 截图会按实际内容高度出图。
+# height 800 只是长图模式的 viewport 占位值,full_page 截图会按实际内容高度出图,
+# 与这个数字无关。分页模式(params 声明了 canvas.height)会在渲染前把 viewport
+# 高度改写成 canvas.height,那时这个占位值同样不生效。
 VIEWPORT = {"width": 1080, "height": 800}
 DEVICE_SCALE_FACTOR = 2
+
+
+class RenderOverflow(Exception):
+    """分页模式下,某一页内容超出固定画布。只在 canvas.height 非空时可能触发。
+
+    用普通异常而非 sys.exit——batch.py 需要能逐卡捕获后继续处理其余卡,
+    不能让一张溢出的卡带崩整批。"""
+
+
+def _cleanup_stale_outputs(out_path, written):
+    """删掉与 out_path 同名、但这次渲染没写到的旧产物。
+
+    典型场景:一套搭配从长图切到分页(或反过来),旧模式遗留的文件
+    (不带页码的单文件,或 -01/-02/... 一组)会在磁盘上滞留,不会被
+    覆盖也不会被发现——这正是本轮开发中 amber/onyx 切到分页后,
+    preview/amber.png 这张旧长图仍在、被 gallery.py 误当成"代表预览"
+    选中的真实事故。清理逻辑放在 render_on_page 这个唯一的截图出口,
+    而不是指望每个调用方(run_card/run_preview/batch.py)各自记得处理。
+    """
+    keep = {p.name for p in written}
+    stem, suffix = out_path.stem, out_path.suffix
+    candidates = [out_path] + sorted(out_path.parent.glob(f"{stem}-*{suffix}"))
+    for candidate in candidates:
+        if candidate.exists() and candidate.name not in keep:
+            candidate.unlink()
 
 
 def parse_args():
@@ -224,26 +256,68 @@ def resolve_style_assets(style_name, layout_name, source_desc):
 
 def render_on_page(browser, engine_path, layout_path, data, params, out_path):
     """在已有的 browser 实例上开一个新页渲染。batch.py 批量产卡时复用同一个
-    browser 调用本函数,免去每张卡各起一次 Chromium 进程的开销。"""
+    browser 调用本函数,免去每张卡各起一次 Chromium 进程的开销。
+
+    返回写出的文件路径列表。长图模式(params 无 canvas.height)只写一个文件,
+    列表长度恒为 1,与改造前完全等价——调用方原有的位置解包不用跟着改。
+    分页模式下画布定高,按 renderCard() 报告的总页数循环出图,写成
+    <out_path 主干>-01.png / -02.png / ...;某页溢出画布则抛 RenderOverflow,
+    不静默裁切,由调用方决定怎么处理(batch.py 逐卡捕获继续,单卡渲染直接报错)。
+    """
+    canvas_height = params.get("canvas.height")
     page = browser.new_page(viewport=VIEWPORT, device_scale_factor=DEVICE_SCALE_FACTOR)
     page.goto(engine_path.as_uri())
     # 骨架 CSS 在引擎样式之后注入,同优先级下后者生效
     page.add_style_tag(path=str(layout_path))
     page.evaluate("document.fonts.ready")
-    page.evaluate("({data, params}) => renderCard(data, params)",
-                  {"data": data, "params": params})
-    page.evaluate("document.fonts.ready")
-    page.screenshot(path=str(out_path), full_page=True)
+
+    if not canvas_height:
+        page.evaluate("({data, params}) => renderCard(data, params)",
+                      {"data": data, "params": params})
+        page.evaluate("document.fonts.ready")
+        page.screenshot(path=str(out_path), full_page=True)
+        page.close()
+        _cleanup_stale_outputs(out_path, [out_path])
+        return [out_path]
+
+    # 分页模式:画布定高,不用 full_page——视口本身就是画布,截出来正好是整张。
+    page.set_viewport_size({"width": VIEWPORT["width"], "height": int(canvas_height)})
+
+    def render_page_n(n):
+        info = page.evaluate(
+            "({data, params, n}) => renderCard(data, params, n)",
+            {"data": data, "params": params, "n": n})
+        page.evaluate("document.fonts.ready")
+        if info.get("overflow"):
+            page.close()
+            raise RenderOverflow(
+                f"{out_path.stem} 第 {n} 页内容溢出画布:内容高 "
+                f"{info.get('contentHeight')}px > 画布 {info.get('canvasHeight')}px"
+                f"(共 {info.get('pages')} 页)")
+        return info
+
+    info = render_page_n(1)
+    pages = int(info.get("pages", 1))
+    written = []
+    for n in range(1, pages + 1):
+        if n > 1:
+            render_page_n(n)
+        page_path = out_path.with_name(f"{out_path.stem}-{n:02d}{out_path.suffix}")
+        page.screenshot(path=str(page_path))
+        written.append(page_path)
     page.close()
+    _cleanup_stale_outputs(out_path, written)
+    return written
 
 
 def render_page(engine_path, layout_path, data, params, out_path):
-    """加载引擎 → 注入骨架 CSS → 注入数据与参数 → 全页截图。
-    单卡渲染用,自行管理 browser 生命周期(用完即关)。"""
+    """加载引擎 → 注入骨架 CSS → 注入数据与参数 → 截图(长图或分页,见 render_on_page)。
+    单卡渲染用,自行管理 browser 生命周期(用完即关)。返回写出的文件路径列表。"""
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        render_on_page(browser, engine_path, layout_path, data, params, out_path)
+        written = render_on_page(browser, engine_path, layout_path, data, params, out_path)
         browser.close()
+        return written
 
 
 def run_preview(args):
@@ -276,8 +350,12 @@ def run_preview(args):
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / f"{preset_name}.png"
 
-    render_page(engine_path, layout_path, data, params, out_path)
-    print(f"已渲染风格预览({preset_name} / {layout_name}) -> {out_path}")
+    written = render_page(engine_path, layout_path, data, params, out_path)
+    if len(written) == 1:
+        print(f"已渲染风格预览({preset_name} / {layout_name}) -> {written[0]}")
+    else:
+        names = ", ".join(str(p) for p in written)
+        print(f"已渲染风格预览({preset_name} / {layout_name},共 {len(written)} 页) -> {names}")
 
 
 def resolve_card(card_dir):
@@ -344,8 +422,12 @@ def resolve_card(card_dir):
 def run_card(args):
     card_dir = Path(args.card_dir).resolve()
     engine_path, layout_path, data, params, out_path = resolve_card(card_dir)
-    render_page(engine_path, layout_path, data, params, out_path)
-    print(f"已渲染知识卡片 -> {out_path}")
+    written = render_page(engine_path, layout_path, data, params, out_path)
+    if len(written) == 1:
+        print(f"已渲染知识卡片 -> {written[0]}")
+    else:
+        names = ", ".join(str(p) for p in written)
+        print(f"已渲染知识卡片(共 {len(written)} 页) -> {names}")
 
 
 def main():

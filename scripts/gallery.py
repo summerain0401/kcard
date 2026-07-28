@@ -67,17 +67,30 @@ def parse_layouts(style_dir):
 
 
 def parse_presets(style_dir):
+    """搭配的预览图有两种命名:长图模式是 <name>.png 单文件;分页模式
+    (canvas.height 非空的搭配)是 render.py 写出的 <name>-01.png / -02.png / ...
+    先找单文件,找不到再找分页组——两者不会同时存在于同一次渲染。
+    pages 记录找到几张,>1 时看板要标注,不然读者会以为只有第一页。"""
     presets = []
     for preset_path in sorted((style_dir / "presets").glob("*.json")):
         with preset_path.open("r", encoding="utf-8") as f:
             preset = json.load(f)
-        preview_path = style_dir / "preview" / f"{preset['name']}.png"
+        preview_dir = style_dir / "preview"
+        single = preview_dir / f"{preset['name']}.png"
+        paged = sorted(preview_dir.glob(f"{preset['name']}-*.png"))
+        if single.exists():
+            preview_name, pages = single.name, 1
+        elif paged:
+            preview_name, pages = paged[0].name, len(paged)
+        else:
+            preview_name, pages = None, 0
         presets.append({
             "name": preset["name"],
             "displayName": preset.get("displayName", preset["name"]),
             "description": preset.get("description", ""),
             "layout": preset.get("layout", ""),
-            "preview": preview_path.name if preview_path.exists() else None,
+            "preview": preview_name,
+            "pages": pages,
         })
     return presets
 
@@ -126,8 +139,12 @@ def render_style_section(style):
     lines.append("| 名称 | 骨架 | 说明 | 预览 |")
     lines.append("|---|---|---|---|")
     for preset in style["presets"]:
-        preview_cell = (f"[{preset['preview']}](styles/{style['name']}/preview/{preset['preview']})"
-                        if preset["preview"] else "(无)")
+        if preset["preview"]:
+            preview_cell = f"[{preset['preview']}](styles/{style['name']}/preview/{preset['preview']})"
+            if preset["pages"] > 1:
+                preview_cell += f"(共 {preset['pages']} 页,仅示首页)"
+        else:
+            preview_cell = "(无)"
         layout_cell = f"`{preset['layout']}`" if preset["layout"] else "(未指定)"
         lines.append(f"| `{preset['name']}` · {preset['displayName']} | {layout_cell} | "
                      f"{preset['description']} | {preview_cell} |")

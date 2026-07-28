@@ -76,24 +76,50 @@ def find_card_dirs(group_dir):
     )
 
 
+def committed_paths_for(card_dir, page_count):
+    """按本次渲染实际写出的页数,推出已提交目录里"应该"对应的路径。
+    page_count=1 时用不带后缀的 output.png——这是分页功能上线前就有的命名,
+    非分页卡永远走这条,与改造前完全兼容。"""
+    if page_count == 1:
+        return [card_dir / "output.png"]
+    return [card_dir / f"output-{i:02d}.png" for i in range(1, page_count + 1)]
+
+
+def find_orphan_pages(card_dir, keep):
+    """已提交目录里属于本卡产物、但这次渲染用不到的文件——多半是页数变化后
+    遗留的旧页(比如 4 页改 3 页,或者分页改回长图/长图改成分页)。
+    dry-run 时要点名报出来,--write 时要删,否则会静默滞留并被误提交。"""
+    keep_names = {p.name for p in keep}
+    existing = list(card_dir.glob("output.png")) + list(card_dir.glob("output-*.png"))
+    return [p for p in sorted(existing) if p.name not in keep_names]
+
+
 def diff_card(browser, card_dir, tmp_dir):
-    """渲染到临时路径,与已提交的 output.png 比较。返回 (状态, detail)。
-    状态取值: 'same' / 'changed' / 'new'(committed output.png 尚不存在)。
+    """渲染到临时路径,与已提交的产物比较。返回 (状态, written, committed, orphans)。
+
+    状态取值:
+      'same'    页数与逐页像素都一致
+      'changed' 逐页像素有差异,或存在孤儿页(页数变化)
+      'new'     已提交目录里一张对应产物都不存在
+    written/committed 长度相同、逐一对应;orphans 是已提交目录里多出来的旧页,
+    仅分页卡在页数变化时可能非空。
     """
-    committed_path = card_dir / "output.png"
-    tmp_path = tmp_dir / f"{card_dir.parent.parent.name}_{card_dir.name}.png"
-
+    tmp_stem = f"{card_dir.parent.parent.name}_{card_dir.name}"
     engine_path, layout_path, data, params, _ = render.resolve_card(card_dir)
-    render.render_on_page(browser, engine_path, layout_path, data, params, tmp_path)
+    written = render.render_on_page(
+        browser, engine_path, layout_path, data, params, tmp_dir / f"{tmp_stem}.png")
 
-    if not committed_path.exists():
-        return "new", tmp_path
+    committed = committed_paths_for(card_dir, len(written))
+    orphans = find_orphan_pages(card_dir, committed)
 
-    old_bytes = committed_path.read_bytes()
-    new_bytes = tmp_path.read_bytes()
-    if old_bytes == new_bytes:
-        return "same", tmp_path
-    return "changed", tmp_path
+    if not any(c.exists() for c in committed):
+        return "new", written, committed, orphans
+
+    same = all(c.exists() and c.read_bytes() == w.read_bytes()
+               for c, w in zip(committed, written))
+    if same and not orphans:
+        return "same", written, committed, orphans
+    return "changed", written, committed, orphans
 
 
 def check_style(style_name, write, tmp_dir):
@@ -111,23 +137,37 @@ def check_style(style_name, write, tmp_dir):
             for card_dir in find_card_dirs(group_dir):
                 label = f"{group_dir.name}/{card_dir.name}"
                 try:
-                    status, tmp_path = diff_card(browser, card_dir, tmp_dir)
+                    status, written, committed, orphans = diff_card(browser, card_dir, tmp_dir)
                 except SystemExit:
                     print(f"  ✗ {label}: 渲染失败")
                     all_ok = False
                     continue
+                except render.RenderOverflow as exc:
+                    print(f"  ✗ {label}: 内容溢出画布 ({exc})")
+                    all_ok = False
+                    continue
+
+                page_note = f"(共 {len(written)} 页)" if len(written) > 1 else ""
 
                 if status == "same":
-                    print(f"  ✓ {label}: 像素一致")
+                    print(f"  ✓ {label}{page_note}: 像素一致")
                 elif status == "new":
-                    print(f"  + {label}: 尚无已提交的 output.png,视为新增")
+                    print(f"  + {label}{page_note}: 尚无已提交的产物,视为新增")
                     if write:
-                        shutil.copy(tmp_path, card_dir / "output.png")
+                        for c, w in zip(committed, written):
+                            shutil.copy(w, c)
                 else:
-                    print(f"  ✗ {label}: 像素有变化" + ("(已写入)" if write else "(未写入,加 --write 接受)"))
+                    detail = "像素有变化"
+                    if orphans:
+                        detail += f",且有 {len(orphans)} 个页数变化遗留的旧页待清理"
+                    print(f"  ✗ {label}{page_note}: {detail}"
+                          + ("(已写入)" if write else "(未写入,加 --write 接受)"))
                     all_ok = False
                     if write:
-                        shutil.copy(tmp_path, card_dir / "output.png")
+                        for c, w in zip(committed, written):
+                            shutil.copy(w, c)
+                        for orphan in orphans:
+                            orphan.unlink()
         browser.close()
 
     return all_ok or write

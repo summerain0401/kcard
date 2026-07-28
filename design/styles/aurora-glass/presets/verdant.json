@@ -74,6 +74,11 @@
     "layout.heroSize": 300,
     "layout.density": 0.95,
     "layout.railSize": 50,
+    "canvas.height": null,
+    "layout.coverBlocks": 2,
+    "layout.blocksPerPage": 2,
+    "layout.contHeaderHeight": 180,
+    "type.contTitleScale": 0.42,
     "chip.opacity": 0.1,
     "chip.radius": 14
   }

@@ -8,7 +8,14 @@
  *
  * 章节区:首块跨满 + 其余两栏,但两栏是**不等宽**的(5:4),延续头版的
  * 不对称。b 骨架用等宽两栏做对称,本骨架用不等宽两栏做失衡,两者刻意区分。
- * 内容池取前 5 块。
+ *
+ * 2026-07-28 起本骨架是画布固定 3:4 的分页试点之一(另一个是 e-mosaic)。
+ * 内容池 6 块按 layout.coverBlocks/blocksPerPage 分页,搭配 onyx 取
+ * 封面 3 + 续页 3 = 2 张图。选它是因为固定开销六骨架里第二小,试点
+ * 优先挑容错空间大的。
+ * coverBlocks 从默认 2 提到 3 有两个理由:首块跨满 + 其余两栏这套构图
+ * 需要凑够 3 块才能把 5:4 两栏刚好填满一行(2 块会空出半栏);且 3+3
+ * 正好两页整除,不会像 3+2 那样留下只剩 1 块的孤儿末页。
  *
  * 骨架负责头版元素定位、色斑落点、以及章节区的排布;外观全部来自 engine.html。
  * 注意:出血靠 .panel 的 overflow:hidden 裁切,这是引擎给的,骨架不必也不应改。
@@ -72,4 +79,28 @@
    这是 data-style 钩子的典型用法:按 block 类型排布,而不是按位置。 */
 .section[data-style="text"] {
   grid-column: 1 / -1;
+}
+
+/* ---- 续页(第 2 张起):去掉出血主体,不等宽两栏改单栏 ----
+   头版收缩、标题缩放、章节区吃掉剩余高度并均分,由 engine.html 的
+   [data-role="cont"] 通用规则处理。这里做本骨架特有的两件事:
+
+   1. 隐藏出血主体,把空出的宽度还给标题。
+   2. **5:4 两栏改单栏**。封面的不等宽两栏是为了延续出血主体造成的失衡;
+      续页主体没了,失衡就失去了由头,而并排还会让两三块内容只占一行、
+      竖向空掉一大半。改单栏后各块占满整行、纵向均分。
+      (另:续页的 data-i 从 3 起,封面那条 [data-i="0"] 首块跨满规则
+       在续页天然选不中,不需要额外解除。) */
+.stage[data-role="cont"] .hero-slot {
+  display: none;
+}
+.stage[data-role="cont"] .head-title,
+.stage[data-role="cont"] .head-sub {
+  width: 100%;
+}
+.stage[data-role="cont"] .grid {
+  grid-template-columns: 1fr;
+}
+.stage[data-role="cont"] .section {
+  grid-column: auto;
 }

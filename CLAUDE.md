@@ -14,7 +14,7 @@ Python env is **shared with the sibling `videoPic` project**, not a local `.venv
 /Volumes/Samsung/videoPic/.venv/bin/python scripts/render.py <card_dir>
 ```
 
-Requires Python 3.13 + playwright(chromium) + Pillow + numpy + scipy. There is no lint/build/test suite — validation is done by rendering and by `style-check.py` / `regress.py` (see below). When verifying a change, the standard move is: re-render the affected cards and diff `output.png` bytes against git (`git status --short | grep output.png` — empty means pixel-identical).
+Requires Python 3.13 + playwright(chromium) + Pillow + numpy + scipy. There is no lint/build/test suite — validation is done by rendering and by `style-check.py` / `regress.py` (see below). When verifying a change, the standard move is: re-render the affected cards and diff `output.png` bytes against git (`git status --short | grep output.png` — empty means pixel-identical; this substring match also catches paginated cards' `output-01.png` etc., see the pagination note below).
 
 ```bash
 # Render one card
@@ -55,9 +55,9 @@ A card's rendering assembles five layers at runtime — nothing is ever copied:
 production/<group>/profile.json      picks style + preset, optionally overrides layout/params
   → design/styles/<style>/presets/<preset>.json   baseline param set
   → design/styles/<style>/layouts/<layout>.css    header-region positioning only
-  → design/styles/<style>/engine.html             parametric rendering engine + renderCard(data, params)
+  → design/styles/<style>/engine.html             parametric rendering engine + renderCard(data, params, pageNum?)
   → production/<group>/cards/<topic>/card.json    pure content (data only, no style reference)
-  → production/<group>/cards/<topic>/output.png
+  → production/<group>/cards/<topic>/output.png   (or output-01.png.. if the layout paginates, see below)
 ```
 
 **Production groups hold zero HTML/CSS.** Switching a card's visual style is a two-line `profile.json` edit — the content file (`card.json`) never changes. This is a deliberate, load-bearing property of the architecture, not an accident: check `production/*/` for HTML/CSS if you're ever unsure — there should be none.
@@ -92,6 +92,8 @@ Because rendering is deterministic, "did this change break anything" has a cheap
 `card.json` holds only `{"data": {...}}` — no style/template reference. The `data` shape (`name`, `nameEn`, `category`, `emoji`, `hero`, `themeColor`, `blocks[]` with `style: list|tags|metric|text`) is shared across styles; a style may add its own optional fields (e.g. `almanac`'s `specimenLabels`) that degrade cleanly to nothing when omitted. This is what lets an existing group's cards render under a different style with zero content edits — see any style's own `schema.md` for the authoritative field list.
 
 In `aurora-glass`, `blocks[]` is a **content pool rather than a render list**: authors fill up to 6 blocks and each layout renders the first N via `layout.blockLimit` (4–6, tuned per layout). Order is priority. This exists because the alternative — trimming `card.json` to control card height — destroys content permanently and can't be undone by switching layouts; it was done once (see the font-size recalibration commits) and should not be repeated. Card height per block varies ~30% across layouts (391–507px measured), so block capacity is a per-layout property, not a per-style constant — measure before setting a new layout's `blockLimit`.
+
+**Pagination (2026-07-28), also `aurora-glass`-only so far.** The target platforms are social feeds (小红书/视频号) that render as fixed-ratio, swipeable image carousels — a variable-height long image gets cropped to the feed's cover ratio and users have to tap through to see the rest, which fights the medium. A layout opts in by declaring `canvas.height` in its preset (currently only `1080×1440`, i.e. 3:4, has been validated); `render.py` then screenshots the fixed viewport instead of `full_page` and loops `renderCard(data, params, pageNum)` to produce `output-01.png`, `output-02.png`, ... — the content pool is split into a cover (`layout.coverBlocks`) plus continuation pages (`layout.blocksPerPage` each), section numbering stays globally continuous across pages. Only two of the six layouts paginate today (`e-mosaic`/`amber`, `c-bleed-poster`/`onyx`, chosen for having the smallest fixed overhead); the other four remain long-image with `canvas.height: null`. Overflow in paginated mode is a **hard, render-time gate** (`RenderOverflow`, raised from `scripts/render.py`) — unlike the long-image aspect-ratio guidance, which is advisory only because `style-check.py` doesn't run Playwright.
 
 `themeColor` resolution order: `profile.params["palette.accent"]` (group-wide fixed color) > card's own `themeColor` > auto-extracted from `hero` image via the style's `accentExtraction` config (only triggers when a `hero` image exists — a card falling back to `emoji` never triggers auto-extraction, so its accent is whatever the style/profile default is).
 

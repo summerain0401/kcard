@@ -67,8 +67,8 @@
 | | |
 |---|---|
 | 版本 | 1.0.0 |
-| 可调维度 | 48 个(完整取值域见 `space.json`)|
-| 硬约束 | 9 条(完整规则见 [STYLE.md](styles/aurora-glass/STYLE.md))|
+| 可调维度 | 53 个(完整取值域见 `space.json`)|
+| 硬约束 | 10 条(完整规则见 [STYLE.md](styles/aurora-glass/STYLE.md))|
 | 被哪些组使用 | (暂无) |
 
 **骨架**
@@ -86,10 +86,10 @@
 
 | 名称 | 骨架 | 说明 | 预览 |
 |---|---|---|---|
-| `amber` · 琥珀 · 拼贴 | `e-mosaic` | 琥珀金配深棕玻璃,章节碎成一组玻璃方片交错拼贴,是六版里唯一把章节做成独立方片的。跨度按 block 类型自动分派——指标条与引文跨满整行,列表与标签排两栏,换一张内容不同的卡拼贴节奏会自己重排。内容池取前 4 块,方片自带内边距,多了会胀。本搭配钉死琥珀强调色 #D9A441,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [amber.png](styles/aurora-glass/preview/amber.png) |
+| `amber` · 琥珀 · 拼贴 | `e-mosaic` | 琥珀金配深棕玻璃,章节碎成一组玻璃方片交错拼贴,是六版里唯一把章节做成独立方片的。封面页跨度按 block 类型自动分派——指标条与引文跨满整行,列表与标签排两栏。2026-07-28 起是画布固定 3:4 的分页试点之一:内容池 6 块拆成 2 张图(封面 3 块 + 续页 3 块),用于小红书/视频号这类图文轮播场景;续页改单栏纵向铺开,方片各自饱满、整组在版面里垂直居中。本搭配钉死琥珀强调色 #D9A441,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [amber-01.png](styles/aurora-glass/preview/amber-01.png)(共 2 页,仅示首页) |
 | `ember` · 余烬 · 正统 | `a-panel-split` | aurora-glass 的基准搭配,也是唯一不钉死强调色的一版——参数全部取 space.json 的 default(含 palette.accent: null),色斑色相随每张卡的主图/themeColor 走,是其余五版的起点。章节区单栏顺排,内容池取前 4 块。 | [ember.png](styles/aurora-glass/preview/ember.png) |
 | `mist` · 雾岚 · 疏朗 | `b-panel-center` | 把硬边色斑推到 120px 模糊,配冷蓝玻璃——光源退成一片雾,画面从产品页转向清晨的窗。面板更透、内缩更深,让色斑有更多露脸的余地。章节区两栏对称、首块跨满,与居中对称的头版呼应;内容池取前 5 块。本搭配钉死冷蓝强调色 #6FA8D6,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [mist.png](styles/aurora-glass/preview/mist.png) |
-| `onyx` · 玄石 · 极简 | `c-bleed-poster` | 只留两团色斑——一团主色、一团近白,面板压到 0.9 不透明度并加大模糊撑住玻璃感。标题加粗到 700、字距收到 -3,是六版里最暗、accent 面积最小的一版。章节区首块跨满 + 其余不等宽两栏(5:4),延续头版的失衡;内容池取前 5 块。本搭配钉死玄紫强调色 #9B7BD4,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [onyx.png](styles/aurora-glass/preview/onyx.png) |
+| `onyx` · 玄石 · 极简 | `c-bleed-poster` | 只留两团色斑——一团主色、一团近白,面板压到 0.9 不透明度并加大模糊撑住玻璃感。标题加粗到 700、字距收到 -3,是六版里最暗、accent 面积最小的一版。封面页首块跨满 + 其余不等宽两栏(5:4),延续头版的失衡。2026-07-28 起是画布固定 3:4 的分页试点之一:内容池 6 块拆成 2 张图(封面 3 块 + 续页 3 块);续页改单栏,失衡的由头(出血主体)已随主体隐藏而消失。本搭配钉死玄紫强调色 #9B7BD4,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [onyx-01.png](styles/aurora-glass/preview/onyx-01.png)(共 2 页,仅示首页) |
 | `quartz` · 石英 · 索引 | `f-index` | 玫瑰灰配近中性玻璃,六版里最素的一版。头版不放主体图,字母印记扶正当主角,整版不依赖任何素材;章节排成目录式左右两栏,内容池取满 6 块。长宽比 1:2.33 是六版里最长的,成立前提是本骨架专供「无主图、纯文字、预期滑动阅读」的选题。本搭配钉死玫瑰灰强调色 #C98A93,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [quartz.png](styles/aurora-glass/preview/quartz.png) |
 | `verdant` · 苔痕 · 时序 | `d-timeline` | 苔绿主色斑配深青玻璃,是六版里最冷静的一版。章节串在一条竖线上顺序读下来,每块起首一枚 accent 圆点当节点,横向分隔线全部取消。适合有先后次序的选题:工艺流程、历史沿革、成长阶段。内容池取前 5 块——再多长宽比会滑出可用区间。本搭配钉死苔绿强调色 #5FA37A,色斑色相由它旋转推导;生产组若要每卡从主图自动取色,在 profile.json 里把 palette.accent 覆写回 null。 | [verdant.png](styles/aurora-glass/preview/verdant.png) |
 

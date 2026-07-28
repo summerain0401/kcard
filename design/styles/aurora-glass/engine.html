@@ -78,6 +78,12 @@
 
     --p-chip-opacity: 0.10;
     --p-chip-radius: 16px;
+
+    /* 分页模式(canvas.height 非空)专用,长图模式下这三个值不生效:
+       --p-canvas-h 默认 auto,即"不设高度"——与改造前完全等价。 */
+    --p-canvas-h: auto;
+    --p-cont-header-h: 180px;
+    --p-cont-title-scale: 0.42;
   }
 
   /* 章节区的全部间距都锚定到 --p-body-size,不写 px 常量。
@@ -120,9 +126,57 @@
   .stage {
     position: relative;
     width: 1080px;
+    /* 分页模式下这里是固定画布高;长图模式(--p-canvas-h: auto,即改造前的
+       默认值)等价于不设置 height,渲染结果不变。 */
+    height: var(--p-canvas-h);
     /* 色斑必须被画布边缘裁成弧形(宪法 E1),靠的就是这一句 */
     overflow: hidden;
     background: hsl(var(--p-scrim-hue) var(--p-scrim-sat) var(--p-scrim-light));
+  }
+
+  /* 续页头版:比封面矮得多——续页不放主体图,只留一条身份标记 + 页码。
+     隐藏 .hero-slot、副标题等属构图决策,交给骨架的 [data-role="cont"] 规则,
+     引擎这里只管跟 layout.contHeaderHeight/type.contTitleScale 直接对应的
+     两条通用规则,因为它们和 .head-title 的字号一样属于"块长什么样"。
+     对不分页的四个骨架,[data-role="cont"] 永远选不中(role 恒为 cover),
+     这两条规则是惰性的。 */
+  .stage[data-role="cont"] .head {
+    height: var(--p-cont-header-h);
+  }
+  .stage[data-role="cont"] .head-title {
+    font-size: calc(var(--p-title-size) * var(--p-cont-title-scale));
+  }
+
+  /* 续页的空白治理。这里踩过一次坑,把结论留下:
+     第一版只做了"面板撑满画布 + footer 用 margin-top:auto 顶到底",
+     结果只是把空白从面板外挪到了面板内,画面依然是内容挤在顶部、
+     下方一大片空——因为真正的空不在面板与画布之间,而在章节区内部。
+
+     根子有两条,都不是靠面板高度能解决的:
+       1. 续页仍沿用封面的两栏。封面两栏是为了给主体图让位,续页主体没了
+          还并排,两块内容只占一行,竖向直接浪费掉一大半——这条归骨架管
+          (见各 layouts 的 [data-role="cont"] 规则)。
+       2. 章节区自身不接管面板的剩余高度,块按内容自然高度堆在顶部。
+          这条归引擎:.grid 吃掉剩余空间,grid-auto-rows:1fr 让各块均分,
+          块内内容再垂直居中——富余空间就变成每块上下对称的呼吸,
+          而不是页面底部的一块空洞。
+
+     只在续页生效;长图模式 data-role 恒为 cover,这些规则天然选不中,
+     改造前的四个骨架一个像素都不受影响。 */
+  .stage[data-role="cont"] .panel {
+    height: calc(var(--p-canvas-h) - var(--p-glass-inset) * 2);
+    display: flex;
+    flex-direction: column;
+  }
+  .stage[data-role="cont"] .grid {
+    flex: 1;
+    /* 块保持内容自然高度,整组在章节区垂直居中——剩余空间成为**版面层**
+       上下对称的留白。
+       试过 grid-auto-rows:1fr 让各块均分行高把画布填满,那是错的:块撑满了,
+       块**内部**却空了(4 个标签的块被拉到 500px 高,内容上下各空 175px),
+       等于把"版面的空"换成"盒子的空",更难看。留白应该留在版面上,
+       盒子必须饱满——这是这套玻璃片语言的前提,片是"实体",不是容器。 */
+    align-content: center;
   }
 
   /* ---------- 色斑层:外观在此,定位由 layouts/*.css 提供 ---------- */
@@ -254,8 +308,12 @@
     letter-spacing: 0.5px;
     color: var(--ink-2);
   }
-  /* 首片以 accent 描边:accent 在本风格只出现在四处,这是其一 */
-  .rail-cell.is-first {
+  /* 描边高亮:accent 在本风格只出现在四处,这是其一。
+     is-first 用于长图模式(片数=章节数,首片高亮);is-current 用于分页模式
+     (片数=总页数,当前页高亮)——两套语义不同,不能共用同一个类名,
+     但视觉处理相同,合并选择器。 */
+  .rail-cell.is-first,
+  .rail-cell.is-current {
     border-color: var(--p-accent);
     color: var(--ink);
   }
@@ -493,6 +551,14 @@
 
     if (has('chip.opacity')) set('--p-chip-opacity', n(params['chip.opacity']));
     if (has('chip.radius'))  set('--p-chip-radius', px(params['chip.radius']));
+
+    /* 分页模式专用,长图骨架的 preset 里这三项恒为 null/未声明,has() 为假,
+       --p-canvas-h 等三个变量维持 :root 默认值(auto / 180px / 0.42),
+       其中只有 --p-canvas-h:auto 真正影响渲染,另两个默认值配合
+       role 恒为 cover 时也选不中,同样是惰性的。 */
+    if (has('canvas.height'))            set('--p-canvas-h', px(params['canvas.height']));
+    if (has('layout.contHeaderHeight'))  set('--p-cont-header-h', px(params['layout.contHeaderHeight']));
+    if (has('type.contTitleScale'))      set('--p-cont-title-scale', n(params['type.contTitleScale']));
   }
 
   /* 色斑:引擎只算颜色与尺寸,位置全部交给骨架的 .orb-1 … .orb-4。
@@ -520,17 +586,31 @@
     field.innerHTML = html;
   }
 
-  /* 章节导航片(E5):片数 = **实际渲染的**章节数,上限 6 片。
-     传进来的必须是 blockLimit 切片之后的数组,不是 data.blocks 原始池子——
-     否则池子 6 块、只渲染 4 块时会出 6 片,导航指向不存在的章节。
-     纯装饰但数据驱动——它反映的是这张卡真实的章节结构,不是随便摆几个方块。 */
-  function renderRail(blocks) {
+  /* 章节导航片(E5)。含义随画布模式变化,不能共用一份计算逻辑:
+       长图模式:片数 = **实际渲染的**章节数,首片高亮(is-first)。
+                这是改造前的行为,原样保留——不分页的四个骨架不该因为
+                分页功能上线而多出一个像素的变化。
+       分页模式:片数 = **总页数**,当前页高亮(is-current)。此时片数与
+                章节数不再相等(6 块内容可能只出 3 页),必须是独立的计算。 */
+  function renderRailSections(blocks) {
     const rail = document.getElementById('chapter-rail');
     const cells = Math.min((blocks || []).length, 6);
     let html = '';
     for (let i = 0; i < cells; i++) {
       html += `<div class="rail-cell${i === 0 ? ' is-first' : ''}">` +
               `${String(i + 1).padStart(2, '0')}</div>`;
+    }
+    rail.innerHTML = html;
+  }
+
+  function renderRailPages(current, total) {
+    const rail = document.getElementById('chapter-rail');
+    const cells = Math.min(total, 6);
+    let html = '';
+    for (let i = 0; i < cells; i++) {
+      const p = i + 1;
+      html += `<div class="rail-cell${p === current ? ' is-current' : ''}">` +
+              `${String(p).padStart(2, '0')}</div>`;
     }
     rail.innerHTML = html;
   }
@@ -565,12 +645,20 @@
   }
 
   /**
-   * data   = { name, nameEn, category, themeColor, hero, blocks: [...] }
-   *          字段说明见同目录 schema.md。emoji 字段被刻意忽略(宪法 H8)。
-   * params = space.json 的点分键名 → 值。缺省时用 :root 里的默认值。
+   * data    = { name, nameEn, category, themeColor, hero, blocks: [...] }
+   *           字段说明见同目录 schema.md。emoji 字段被刻意忽略(宪法 H8)。
+   * params  = space.json 的点分键名 → 值。缺省时用 :root 里的默认值。
+   * pageNum = 要渲染第几页,从 1 起。仅 canvas.height 非空(分页模式)时有意义;
+   *           长图模式忽略此参数,行为与改造前完全一致。
+   *
+   * 返回 { page, pages, overflow, contentHeight, canvasHeight }:
+   *   长图模式恒为 { page:1, pages:1, overflow:false }(调用方不读这些值);
+   *   分页模式下 render.py 用 pages 决定要循环渲染几页,用 overflow
+   *   判断这一页是否超出画布——超出即报错,不静默裁切内容。
    */
-  function renderCard(data, params) {
+  function renderCard(data, params, pageNum) {
     params = params || {};
+    pageNum = Math.max(1, Number(pageNum) || 1);
     applyParams(params);
 
     const accent = params['palette.accent'] || data.themeColor;
@@ -598,32 +686,76 @@
       heroSlot.innerHTML = `<div class="hero-mark">${esc(mark)}</div>`;
     }
 
-    /* 内容池模型:card.json 的 blocks 是池子(最多 6 块),骨架取前 N 块。
-       顺序即优先级——最重要的写在前面。切片之后的 blocks 是本次渲染的全部依据,
-       导航片(E5)也必须用它:用原始 data.blocks 会出 6 片却只有 4 个章节,
-       导航指向不存在的位置。 */
-    const limit = Number(params['layout.blockLimit'] ?? 4);
-    const blocks = (data.blocks || []).slice(0, limit);
+    /* 内容池:最多 6 块,顺序即优先级,最重要的写在前面。
+       长图模式按 layout.blockLimit 直接取前 N 块(改造前的行为);
+       分页模式按 layout.coverBlocks / layout.blocksPerPage 分配到各页——
+       封面页取池头 coverBlocks 块,续页依次各取 blocksPerPage 块。
+       startIndex 同时驱动 data-i 与 sec-no:章节编号是全局连续的
+       (页二接着页一的编号往下排),不是每页各自从 01 重新数,
+       这样轮播读起来像一份连续的文档,不是三份互不相干的片段。 */
+    const pool = (data.blocks || []).slice(0, 6);
+    const canvasHeight = Number(params['canvas.height']) || 0;
+    const stage = document.getElementById('stage');
 
-    renderRail(blocks);
+    let blocks, role, totalPages, startIndex;
+    if (!canvasHeight) {
+      const limit = Number(params['layout.blockLimit'] ?? 4);
+      blocks = pool.slice(0, limit);
+      role = 'cover';
+      totalPages = 1;
+      startIndex = 0;
+      renderRailSections(blocks);
+    } else {
+      const coverN = Number(params['layout.coverBlocks'] ?? 2);
+      const perPage = Number(params['layout.blocksPerPage'] ?? 2);
+      const remain = Math.max(0, pool.length - coverN);
+      totalPages = 1 + Math.ceil(remain / perPage);
+      if (pageNum <= 1) {
+        startIndex = 0;
+        blocks = pool.slice(0, coverN);
+        role = 'cover';
+      } else {
+        startIndex = coverN + (pageNum - 2) * perPage;
+        blocks = pool.slice(startIndex, startIndex + perPage);
+        role = 'cont';
+      }
+      renderRailPages(Math.min(pageNum, totalPages), totalPages);
+    }
+
+    /* .stage 的两个新钩子:data-role 供骨架决定续页要不要隐藏主体图、
+       挪页码条位置(见 STYLE.md 第五节);data-page 目前无骨架消费,
+       为将来"每页构图各自不同"(而不仅是 cover/cont 二分)预留。 */
+    stage.dataset.page = pageNum;
+    stage.dataset.role = role;
 
     /* 章节区的三个钩子,供 layouts/*.css 选中——引擎只负责输出,
        用不用、怎么用由骨架决定(见 STYLE.md 第五节的职责线):
-         .grid[data-n]          实际渲染的块数,骨架据此切换网格
-         .section[data-i]       索引,骨架据此做逐块差异化
+         .grid[data-n]          本页实际渲染的块数,骨架据此切换网格
+         .section[data-i]       内容池里的全局索引,骨架据此做逐块差异化
          .section[data-style]   block 类型,骨架据此按类型排布
        钩子只是属性,没有 CSS 选中时不影响任何渲染结果。 */
     const grid = document.getElementById('grid');
     grid.dataset.n = blocks.length;
     grid.innerHTML = blocks.map((block, i) => `
       <div class="section${block.span === 'full' ? ' span-full' : ''}"
-           data-i="${i}" data-style="${esc(block.style || 'list')}">
+           data-i="${startIndex + i}" data-style="${esc(block.style || 'list')}">
         <div class="sec-head">
-          <span class="sec-no">${String(i + 1).padStart(2, '0')}</span>
+          <span class="sec-no">${String(startIndex + i + 1).padStart(2, '0')}</span>
           <span class="sec-title">${esc(block.title || '')}</span>
         </div>
         ${renderBlockBody(block)}
       </div>`).join('');
+
+    if (!canvasHeight) return { page: 1, pages: 1, overflow: false };
+
+    /* 溢出测量:量 .panel 底边相对画布顶部(= 视口顶部,.stage 无外边距)
+       的距离,而不是拿某个 inset 参数去反推——用几何位置直接判断,
+       任何骨架改了 .panel 的盒模型都不会让这条检测失真。 */
+    const panel = stage.querySelector('.panel');
+    const bottom = Math.round(panel.getBoundingClientRect().bottom);
+    const overflow = bottom > canvasHeight + 0.5;
+    return { page: pageNum, pages: totalPages, overflow,
+             contentHeight: bottom, canvasHeight };
   }
 
   window.renderCard = renderCard;

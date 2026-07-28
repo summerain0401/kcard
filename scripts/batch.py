@@ -76,13 +76,22 @@ def main():
             name = card_dir.name
             try:
                 engine_path, layout_path, data, params, out_path = render.resolve_card(card_dir)
-                render.render_on_page(browser, engine_path, layout_path, data, params, out_path)
-                print(f"✓ {name} -> {out_path}")
+                written = render.render_on_page(browser, engine_path, layout_path, data, params, out_path)
+                if len(written) == 1:
+                    print(f"✓ {name} -> {written[0]}")
+                else:
+                    print(f"✓ {name}(共 {len(written)} 页) -> " + ", ".join(str(p) for p in written))
                 ok += 1
             except SystemExit:
                 # resolve_card 对单张卡的数据错误走 sys.exit(1);批量场景下
                 # 不能让一张坏卡拖垮整批,记下来继续渲染其余卡片。
                 print(f"✗ {name} 渲染失败,已跳过", file=sys.stderr)
+                failed.append(name)
+            except render.RenderOverflow as exc:
+                # 分页模式专用:某页内容超出固定画布。同样不拖垮整批,
+                # 但要把溢出详情打出来——这条错误比"渲染失败"更具体,
+                # 直接告诉生产组该调哪个参数(减内容、加页、还是加画布高)。
+                print(f"✗ {name} 内容溢出画布: {exc}", file=sys.stderr)
                 failed.append(name)
         browser.close()
 
