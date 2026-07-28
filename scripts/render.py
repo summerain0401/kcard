@@ -155,22 +155,32 @@ def load_preset(style_name, preset_name):
 
 
 def resolve_params(space, preset, profile, profile_path):
-    """合并 preset 与生产组 profile 的参数。
+    """合并 space.json 的 default、preset 与生产组 profile 的参数。
 
-    优先级:profile.params > preset.params。
+    优先级:profile.params > preset.params > space.json 的 default。
     space.json 的 params 段未声明的键一律报错——未声明即不可调。
     取值域与跨维不变式的校验属 style-check.py(阶段4),此处只挡未声明的键。
+
+    返回值总是包含 space.json 声明的**全部**参数键(未被 preset/profile
+    覆写的填 default)。这不是可选的便利——preset 允许只写与 default 的
+    差异(稀疏化,便于阅读哪一版改了什么),但下游两处消费者都要求拿到
+    完整字典,单靠 engine.html 的 CSS `:root` 回落救不了它们:
+      1. style-check.py 的不变式求值器直接按键查 params,缺键就
+         ValueError("引用了未声明的参数"),不会静默跳过。
+      2. 本文件自己的分页判断 `params.get("canvas.height")`
+         是 Python 分支,不经过 CSS,preset 不声明就读不到 space.json 的 default。
     """
-    declared = set(space.get("params", {}))
+    declared = space.get("params", {})
     overrides = profile.get("params", {})
 
-    unknown = sorted(set(overrides) - declared)
+    unknown = sorted(set(overrides) - set(declared))
     if unknown:
         print(f"错误: {profile_path} 使用了未声明的参数 {', '.join(unknown)};"
               f"风格的 space.json 未开放这些维度,需向设计部提案扩展", file=sys.stderr)
         sys.exit(1)
 
-    params = dict(preset.get("params", {}))
+    params = {k: v["default"] for k, v in declared.items() if "default" in v}
+    params.update(preset.get("params", {}))
     params.update(overrides)
     return params
 
@@ -328,9 +338,12 @@ def run_preview(args):
     """
     style_name, preset_name = args.style, args.preset
 
-    space, _ = load_space(style_name)
+    space, space_path = load_space(style_name)
     preset = load_preset(style_name, preset_name)
-    params = dict(preset.get("params", {}))
+    # 预览没有生产组 profile,传空字典即"无覆写"——resolve_params() 补齐的
+    # 是与生产渲染同一份逻辑,保证预览与生产对同一份 preset 渲染结果一致
+    # (稀疏 preset 若只在这里手动拼字典,会拿到与生产路径不同的缺省值)。
+    params = resolve_params(space, preset, {}, space_path)
 
     sample_path = STYLES_DIR / style_name / "sample.json"
     if not sample_path.exists():

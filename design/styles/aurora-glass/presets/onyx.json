@@ -32,7 +32,6 @@
       300,
       260
     ],
-    "orb.blur": 0,
     "orb.opacity": 0.95,
     "glass.hue": 265,
     "glass.saturation": 0.1,
@@ -51,8 +50,6 @@
     "ink.lightness": 0.93,
     "ink.secondaryLightness": 0.58,
     "palette.accent": "#9B7BD4",
-    "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
-    "type.latin": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
     "type.titleSize": 96,
     "type.titleTracking": -3,
     "type.titleWeight": 700,
@@ -62,7 +59,6 @@
     "type.bodyLeading": 1.62,
     "type.labelSize": 16,
     "type.labelTracking": 4,
-    "layout.columns": 1,
     "layout.blockLimit": 5,
     "layout.columnGap": 40,
     "layout.panelPadding": [
@@ -77,8 +73,6 @@
     "canvas.height": 1440,
     "layout.coverBlocks": 3,
     "layout.blocksPerPage": 3,
-    "layout.contHeaderHeight": 180,
-    "type.contTitleScale": 0.42,
     "chip.opacity": 0.08,
     "chip.radius": 14
   }

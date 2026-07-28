@@ -7,7 +7,6 @@
     "scrim.hue": 340,
     "scrim.saturation": 0.12,
     "scrim.lightness": 0.075,
-    "orb.count": 3,
     "orb.hueShifts": [
       0,
       30,
@@ -39,11 +38,8 @@
     "glass.lightness": 0.13,
     "glass.opacity": 0.72,
     "glass.blur": 58,
-    "glass.radius": 30,
     "glass.edgeLight": 0.2,
-    "glass.borderAlpha": 0.14,
     "glass.shadowY": 26,
-    "glass.shadowBlur": 70,
     "glass.shadowAlpha": 0.48,
     "glass.inset": 48,
     "ink.hue": 340,
@@ -51,10 +47,7 @@
     "ink.lightness": 0.96,
     "ink.secondaryLightness": 0.66,
     "palette.accent": "#C98A93",
-    "type.sans": "'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', system-ui, sans-serif",
-    "type.latin": "'Avenir Next', 'Helvetica Neue', 'Inter', system-ui, sans-serif",
     "type.titleSize": 90,
-    "type.titleTracking": -2,
     "type.titleWeight": 500,
     "type.subtitleSize": 20,
     "type.secTitleSize": 27,
@@ -62,7 +55,6 @@
     "type.bodyLeading": 1.68,
     "type.labelSize": 16,
     "type.labelTracking": 3.4,
-    "layout.columns": 1,
     "layout.blockLimit": 6,
     "layout.columnGap": 40,
     "layout.panelPadding": [
@@ -70,16 +62,9 @@
       56,
       48
     ],
-    "layout.headerHeight": 420,
     "layout.heroSize": 300,
     "layout.density": 0.92,
     "layout.railSize": 46,
-    "canvas.height": null,
-    "layout.coverBlocks": 2,
-    "layout.blocksPerPage": 2,
-    "layout.contHeaderHeight": 180,
-    "type.contTitleScale": 0.42,
-    "chip.opacity": 0.1,
     "chip.radius": 12
   }
 }

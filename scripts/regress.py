@@ -40,11 +40,16 @@ def parse_args():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("style", type=str, nargs="?", help="只检查这一套风格")
     group.add_argument("--all", action="store_true", help="检查全部风格")
+    group.add_argument("--engine-defaults", type=str, metavar="STYLE",
+                        help="校验风格的 engine.html :root 默认值是否与 space.json 的"
+                             " default 逐位一致(见下方说明),不涉及 production/")
     parser.add_argument("--write", action="store_true",
                         help="用新渲染结果覆盖 output.png(即接受这次变化);默认只检查不写")
     args = parser.parse_args()
-    if not args.style and not args.all:
-        parser.error("须给出风格名,或使用 --all")
+    if not args.style and not args.all and not args.engine_defaults:
+        parser.error("须给出风格名、使用 --all,或使用 --engine-defaults")
+    if args.engine_defaults and args.write:
+        parser.error("--engine-defaults 不支持 --write(它不产生要接受的变更,只报告是否一致)")
     return args
 
 
@@ -122,6 +127,76 @@ def diff_card(browser, card_dir, tmp_dir):
     return "changed", written, committed, orphans
 
 
+def check_engine_defaults(style_name, tmp_dir):
+    """校验 engine.html 的 `:root` 默认值是否与 space.json 的 default 逐位一致。
+
+    背景:render.py 的 resolve_params() 总是用 space.json 的 default 补全
+    未被 preset/profile 覆写的键(见 render.py 里的说明),所以生产渲染与
+    风格预览实际上**从不**依赖 engine.html 的 `:root` 兜底——applyParams()
+    的 has(k) 判断永远为真,`:root` 的硬编码值是死代码。既然如此,这条检查
+    就不是运行时正确性闸门,而是给 `:root` 那句"默认值等于 space.json 的
+    default"的注释做纪律检查:它曾经真的漂移过(层高/主体尺寸两个参数与
+    default 相差 80–60px,被 preset 全量声明长期掩盖,直到六套 preset 稀疏化
+    才第一次因为真的依赖 `:root` 兜底而暴露),留着这条检查是为了不再靠"六套
+    preset 恰好全覆盖"这种偶然性来发现下一次类似漂移。
+
+    做法:同一份 sample.json、同一个骨架,分别传空参数 {} 与 space.json 的
+    全部 default 各渲染一次。前者完全依赖 `:root`,后者显式传值——
+    两者字节一致,才说明 `:root` 没有漂移。
+    """
+    space, space_path = render.load_space(style_name)
+    declared = space.get("params", {})
+    defaults = {k: v["default"] for k, v in declared.items() if "default" in v}
+
+    sample_path = STYLES_DIR / style_name / "sample.json"
+    if not sample_path.exists():
+        print(f"{style_name}: 缺 {sample_path},无法校验")
+        return False
+
+    import json
+    with sample_path.open("r", encoding="utf-8") as f:
+        data_template = json.load(f)
+
+    presets_dir = STYLES_DIR / style_name / "presets"
+    preset_paths = sorted(presets_dir.glob("*.json"))
+    if not preset_paths:
+        print(f"{style_name}: presets/ 下没有搭配,无法取一个骨架名来渲染")
+        return False
+    with preset_paths[0].open("r", encoding="utf-8") as f:
+        layout_name = json.load(f).get("layout")
+
+    engine_path, layout_path = render.resolve_style_assets(
+        style_name, layout_name, f"regress --engine-defaults({preset_paths[0].name})")
+
+    import copy
+    empty_out = tmp_dir / f"{style_name}-engine-defaults-empty.png"
+    full_out = tmp_dir / f"{style_name}-engine-defaults-full.png"
+    written_empty = render.render_page(
+        engine_path, layout_path, copy.deepcopy(data_template), {}, empty_out)
+    written_full = render.render_page(
+        engine_path, layout_path, copy.deepcopy(data_template), defaults, full_out)
+
+    if len(written_empty) != len(written_full):
+        print(f"{style_name}: ✗ 页数不一致(空参数 {len(written_empty)} 页 vs "
+              f"全 default {len(written_full)} 页)—— :root 与 space.json 的 "
+              f"canvas.height 相关默认值可能不一致")
+        return False
+
+    mismatches = [
+        i for i, (e, f) in enumerate(zip(written_empty, written_full), 1)
+        if e.read_bytes() != f.read_bytes()
+    ]
+    if mismatches:
+        print(f"{style_name}: ✗ 第 {mismatches} 页像素不一致——"
+              f"engine.html 的 :root 与 space.json 的 default 有漂移,"
+              f"逐参数比对两处取值")
+        return False
+
+    print(f"{style_name}: ✓ engine.html 的 :root 与 space.json 的 "
+          f"default 逐位一致({len(defaults)} 项)")
+    return True
+
+
 def check_style(style_name, write, tmp_dir):
     groups = groups_using_style(style_name)
     if not groups:
@@ -175,6 +250,15 @@ def check_style(style_name, write, tmp_dir):
 
 def main():
     args = parse_args()
+
+    if args.engine_defaults:
+        if not (STYLES_DIR / args.engine_defaults).exists():
+            print(f"错误: 找不到风格 {STYLES_DIR / args.engine_defaults}", file=sys.stderr)
+            sys.exit(1)
+        with tempfile.TemporaryDirectory(prefix="kcard-regress-") as tmp:
+            ok = check_engine_defaults(args.engine_defaults, Path(tmp))
+        print(f"\n{'PASS' if ok else 'FAIL'}")
+        sys.exit(0 if ok else 1)
 
     if args.all:
         style_names = sorted(d.name for d in STYLES_DIR.iterdir() if d.is_dir())
