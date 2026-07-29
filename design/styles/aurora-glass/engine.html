@@ -706,14 +706,23 @@
       + (data.nameEn ? esc(data.nameEn) : '');
     document.getElementById('footer-latin').textContent = (data.nameEn || '').toUpperCase();
 
-    /* 无主图不退回 emoji(宪法 H8),改用 nameEn 首字母的字母印记(E7);
-       连 nameEn 也没有时才退到 name 首字。 */
+    /* 无主图不退回 emoji(宪法 H8),改用 nameEn 的字母印记(E7);
+       连 nameEn 也没有时才退到 name 首字。
+
+       nameEn 本身就是两个拉丁字母时(化学符号 Au / Hg、机场码、货币码这类
+       **符号即名字**的题材),整体作为印记而不取首字母——单字母在这类题材里
+       碰撞太密(C 同时是碳、氯、钙、铯、铬),印记会失去辨识度。长名一律仍取
+       首字母,故既有内容零像素差。第二个字母保留原大小写:元素符号是 Au 不是 AU。 */
     const heroSlot = document.getElementById('hero-slot');
     if (data.hero) {
       heroSlot.innerHTML = `<img class="hero-photo" src="${data.hero}">`;
     } else {
-      const mark = (data.nameEn || data.name || '').trim().charAt(0).toUpperCase();
-      heroSlot.innerHTML = `<div class="hero-mark">${esc(mark)}</div>`;
+      const latin = (data.nameEn || '').trim();
+      const mark = /^[A-Za-z]{2}$/.test(latin)
+        ? latin.charAt(0).toUpperCase() + latin.charAt(1)
+        : (latin || (data.name || '')).trim().charAt(0).toUpperCase();
+      heroSlot.innerHTML =
+        `<div class="hero-mark" data-len="${mark.length}">${esc(mark)}</div>`;
     }
 
     /* 内容池:顺序即优先级,最重要的写在前面。2026-07-28 起取消 6 块硬上限

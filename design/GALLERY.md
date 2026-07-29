@@ -12,7 +12,7 @@
 | 风格 | 版本 | 骨架 | 搭配 | 被哪些组使用 |
 |---|---|---|---|---|
 | [almanac](styles/almanac/) | 1.0.0 | 3 | 2 | `english-vocab` |
-| [aurora-glass](styles/aurora-glass/) | 1.0.0 | 6 | 6 | (暂无) |
+| [aurora-glass](styles/aurora-glass/) | 1.0.0 | 6 | 6 | `chemical-elements` |
 | [editorial-mono](styles/editorial-mono/) | 1.0.0 | 3 | 3 | `food-encyclopedia` |
 
 「暂无组使用」是正常状态——设计部可以先囤方案,不必等生产需求。风格与生产组的新增彼此独立,详见 `PLAN.md` 第五节。
@@ -69,7 +69,7 @@
 | 版本 | 1.0.0 |
 | 可调维度 | 50 个(完整取值域见 `space.json`)|
 | 硬约束 | 10 条(完整规则见 [STYLE.md](styles/aurora-glass/STYLE.md))|
-| 被哪些组使用 | (暂无) |
+| 被哪些组使用 | `chemical-elements` |
 
 **骨架**
 

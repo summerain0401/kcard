@@ -1,0 +1,15 @@
+{
+  "style": "aurora-glass",
+  "preset": "quartz",
+
+  "params": {
+    "palette.accent": null,
+
+    "scrim.hue": 220,
+    "scrim.saturation": 0.04,
+    "glass.hue": 220,
+    "glass.saturation": 0.03,
+    "ink.hue": 220,
+    "ink.saturation": 0.02
+  }
+}
