@@ -24,7 +24,8 @@ accent 优先级:params["palette.accent"](组级固定色)> card.json 的 themeC
 - 默认(params 未声明 canvas.height,或声明为 null)是长图模式:engine.html 通过
   CSS 自行定义画布尺寸(如 .stage 的 width/min-height),render.py 用 full_page
   截图,不强行指定 viewport 高度。<card_dir>/output.png 只有一张
-- canvas.height 非空则是分页模式(目前仅 aurora-glass 的部分骨架支持):
+- canvas.height 非空则是分页模式(目前仅 aurora-glass 支持,该风格 2026-07-29
+  起全部六个骨架都是分页,不再有长图选项):
   画布定高,render.py 改用视口截图,按 renderCard() 返回的 pages 循环出图,
   写成 output-01.png / output-02.png / ...;内容溢出画布直接抛 RenderOverflow,
   不静默裁切

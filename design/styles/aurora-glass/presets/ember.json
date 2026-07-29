@@ -1,7 +1,7 @@
 {
   "name": "ember",
   "displayName": "余烬 · 正统",
-  "description": "aurora-glass 的基准搭配,也是唯一不钉死强调色的一版——参数全部取 space.json 的 default(含 palette.accent: null),色斑色相随每张卡的主图/themeColor 走,是其余五版的起点。章节区单栏顺排,内容池取前 4 块。",
+  "description": "aurora-glass 的基准搭配,也是唯一不钉死强调色的一版——参数全部取 space.json 的 default(含 palette.accent: null),色斑色相随每张卡的主图/themeColor 走,是其余五版的起点。章节区单栏顺排,内容池按引擎自动断页拆成多张轮播图,不设块数上限。",
   "layout": "a-panel-split",
   "params": {}
 }
