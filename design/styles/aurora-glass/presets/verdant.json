@@ -57,7 +57,6 @@
     "type.bodySize": 27,
     "type.bodyLeading": 1.72,
     "type.labelSize": 17,
-    "layout.blockLimit": 5,
     "layout.panelPadding": [
       60,
       58,

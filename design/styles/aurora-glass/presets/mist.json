@@ -56,7 +56,6 @@
     "type.subtitleSize": 21,
     "type.secTitleSize": 29,
     "type.labelTracking": 3.5,
-    "layout.blockLimit": 5,
     "layout.columnGap": 52,
     "layout.headerHeight": 570,
     "layout.heroSize": 360,

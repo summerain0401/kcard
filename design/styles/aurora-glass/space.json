@@ -395,17 +395,6 @@
       "scope": "production",
       "why": "章节网格栏数。span:full 的块始终占满整行"
     },
-    "layout.blockLimit": {
-      "default": 4,
-      "values": [
-        3,
-        4,
-        5,
-        6
-      ],
-      "scope": "production",
-      "why": "本骨架渲染内容池里的前几块。card.json 的 blocks 是内容池而非渲染清单——可写满 6 块,不同骨架各取所需:疏朗的骨架取 3-4 块压住长宽比,两栏/拼贴类骨架容得下 5-6 块。顺序即优先级,取的是前 N 块。取值域上限 6 即内容池的容量上限:写超过 6 块不会被任何骨架取到"
-    },
     "layout.columnGap": {
       "default": 44,
       "range": [
@@ -470,15 +459,14 @@
       "why": "章节导航小玻璃片的边长(构成要素 E5)。片间距按此值的 0.27 倍派生,不单独开放"
     },
     "canvas.height": {
-      "default": null,
-      "free": true,
+      "default": 1440,
       "range": [
         1080,
         1920
       ],
       "unit": "px",
       "scope": "production",
-      "why": "画布固定高度。留空(null)= 长图,高度随内容自适应,render.py 用 full_page 截图(现状)。非空 = 分页轮播模式:画布定高不再自适应,render.py 改用视口截图,按引擎自动断页(量每页实际能装几块,见 engine.html 的 buildPagingPlan)把内容池切成多张 output-NN.png。1080×1440(3:4)是当前唯一验证过的取值,写给小红书/视频号这类图文轮播场景"
+      "why": "画布固定高度。本风格只出定高分页图,不再支持长图——2026-07-28 起默认 1440(1080×1440 = 3:4),且**不可留空**(不再标 free)。render.py 用视口截图,按引擎自动断页(量每页实际能装几块,见 engine.html 的 buildPagingPlan)把内容池切成多张 output-NN.png。取消长图的理由:目标平台是固定比例的可滑动轮播,长图在信息流里会被裁成封面比例;而且长图那条路上「长宽比合不合适、缩略图字号还读不读得清」只能靠人眼把关,style-check.py 管不了,定高之后这类判断整体消失。3:4 是实测确认过最安全的比例"
     },
     "layout.contHeaderHeight": {
       "default": 180,

@@ -79,9 +79,9 @@
     --p-chip-opacity: 0.10;
     --p-chip-radius: 16px;
 
-    /* 分页模式(canvas.height 非空)专用,长图模式下这三个值不生效:
-       --p-canvas-h 默认 auto,即"不设高度"——与改造前完全等价。 */
-    --p-canvas-h: auto;
+    /* 画布定高与续页头版。本风格只出 3:4 分页图,canvas.height 不可留空
+       (space.json 已收回 free),故这里也不再有 auto 这一档。 */
+    --p-canvas-h: 1440px;
     --p-cont-header-h: 180px;
     --p-cont-title-scale: 0.42;
   }
@@ -126,8 +126,7 @@
   .stage {
     position: relative;
     width: 1080px;
-    /* 分页模式下这里是固定画布高;长图模式(--p-canvas-h: auto,即改造前的
-       默认值)等价于不设置 height,渲染结果不变。 */
+    /* 固定画布高。本风格只出定高分页图,不存在"高度随内容自适应"那一档。 */
     height: var(--p-canvas-h);
     /* 色斑必须被画布边缘裁成弧形(宪法 E1),靠的就是这一句 */
     overflow: hidden;
@@ -135,48 +134,75 @@
   }
 
   /* 续页头版:比封面矮得多——续页不放主体图,只留一条身份标记 + 页码。
-     隐藏 .hero-slot、副标题等属构图决策,交给骨架的 [data-role="cont"] 规则,
-     引擎这里只管跟 layout.contHeaderHeight/type.contTitleScale 直接对应的
-     两条通用规则,因为它们和 .head-title 的字号一样属于"块长什么样"。
-     对不分页的四个骨架,[data-role="cont"] 永远选不中(role 恒为 cover),
-     这两条规则是惰性的。 */
+     隐藏 .hero-slot、标题挪位等属构图决策,交给骨架的 [data-role="cont"]
+     规则;引擎这里只管跟 layout.contHeaderHeight / type.contTitleScale 直接
+     对应的两条,因为它们和字号一样属于"块长什么样"。
+
+     续页标题的**实际**字号单独派生成一个变量供骨架做间距计算:骨架若直接拿
+     --p-title-size 去推副标题位置,续页上会错位一大截——那是封面的字号,
+     续页已经按 --p-cont-title-scale 缩过。
+     (必须声明在 .stage 而非 :root,理由见文件头注释。) */
+  .stage {
+    --p-cont-title-size: calc(var(--p-title-size) * var(--p-cont-title-scale));
+  }
   .stage[data-role="cont"] .head {
     height: var(--p-cont-header-h);
   }
   .stage[data-role="cont"] .head-title {
-    font-size: calc(var(--p-title-size) * var(--p-cont-title-scale));
+    font-size: var(--p-cont-title-size);
   }
 
-  /* 续页的空白治理。这里踩过一次坑,把结论留下:
-     第一版只做了"面板撑满画布 + footer 用 margin-top:auto 顶到底",
-     结果只是把空白从面板外挪到了面板内,画面依然是内容挤在顶部、
-     下方一大片空——因为真正的空不在面板与画布之间,而在章节区内部。
+  /* 空白治理。这条路走了三版才对,把三次的结论都留下:
 
-     根子有两条,都不是靠面板高度能解决的:
-       1. 续页仍沿用封面的两栏。封面两栏是为了给主体图让位,续页主体没了
-          还并排,两块内容只占一行,竖向直接浪费掉一大半——这条归骨架管
+     **第一版**:面板撑满画布 + footer 用 margin-top:auto 顶到底。
+     错在只把空白从面板外挪到了面板内,画面依然是内容挤在顶部、下方一大片
+     空——真正的空不在面板与画布之间,而在章节区内部。根子有两条:
+       1. 续页沿用了封面的两栏。封面两栏是为了给主体图让位,续页主体没了
+          还并排,两块内容只占一行,竖向浪费掉一大半——这条归骨架管
           (见各 layouts 的 [data-role="cont"] 规则)。
        2. 章节区自身不接管面板的剩余高度,块按内容自然高度堆在顶部。
-          这条归引擎:.grid 吃掉剩余空间,grid-auto-rows:1fr 让各块均分,
-          块内内容再垂直居中——富余空间就变成每块上下对称的呼吸,
-          而不是页面底部的一块空洞。
+          这条归引擎,即下面 .grid 的 flex:1。
 
-     只在续页生效;长图模式 data-role 恒为 cover,这些规则天然选不中,
-     改造前的四个骨架一个像素都不受影响。 */
-  .stage[data-role="cont"] .panel {
+     **第二版**:grid-auto-rows:1fr,让各块均分行高把画布填满。也是错的——
+     块撑满了,块**内部**却空了(4 个标签的块被拉到 500px 高,内容上下各空
+     175px),等于把"版面的空"换成"盒子的空",更难看。由此定下这条前提:
+     **留白留在版面上,盒子必须饱满**——片是"实体",不是容器。
+
+     **第三版(现行)**:align-content: space-evenly。第二版之后一度用 center,
+     盒子是饱满了,但富余空间全堆在章节区的上下两端,块组像一团东西浮在
+     中央——自动断页后这个毛病更明显:一页只装得下 2 块时,上下各空 300px
+     以上(d-timeline 那版尤其难看,竖线贯穿全高而节点只占中段)。
+     space-evenly 把同一份富余空间均摊到块与块之间及两端,盒子依旧饱满,
+     留白变成"章节之间呼吸得开",而不是"中间一坨、两头两个洞"。
+     满页时它与 center 几乎无差别,空页时明显更像有意为之。 */
+
+  /* 面板定高,**封面与续页一视同仁**:每张轮播图共用同一个玻璃框,四边
+     inset 对称。曾经只给续页定高,封面留自动高——那样封面一旦内容少,
+     面板就缩成一小块浮在画布上方,下面空出一大片裸幕布,比留白更糟,
+     是构图散架。定比例轮播里"每张图的框一模一样"是前提,不是可选项。 */
+  .panel {
     height: calc(var(--p-canvas-h) - var(--p-glass-inset) * 2);
     display: flex;
     flex-direction: column;
   }
-  .stage[data-role="cont"] .grid {
-    flex: 1;
-    /* 块保持内容自然高度,整组在章节区垂直居中——剩余空间成为**版面层**
-       上下对称的留白。
-       试过 grid-auto-rows:1fr 让各块均分行高把画布填满,那是错的:块撑满了,
-       块**内部**却空了(4 个标签的块被拉到 500px 高,内容上下各空 175px),
-       等于把"版面的空"换成"盒子的空",更难看。留白应该留在版面上,
-       盒子必须饱满——这是这套玻璃片语言的前提,片是"实体",不是容器。 */
-    align-content: center;
+  /* 头版与页脚不参与 flex 收缩。少了这一句,内容一旦装不下,flex 会先去压
+     头版(它是唯一"可压缩"的一项),结果标题被挤出画面、导航片消失,而
+     .panel 的外框尺寸纹丝不动——错得无声无息。宁可让它撑破,由测量环节
+     发现并翻页。 */
+  .head,
+  .footer {
+    flex: none;
+  }
+
+  /* 测量态:临时解除定高与 flex,让面板按内容自然撑开。
+     这是自动断页能正确工作的前提。续页的 .panel 是**定高**的
+     (canvas - inset*2),所以它的 getBoundingClientRect() 恒为那个固定值,
+     内容再多也不会变——拿它判断"装不装得下"永远为真,溢出会被
+     .panel 的 overflow:hidden 悄悄裁掉。故测量时必须先摘掉定高,
+     量出内容的自然高度,再与它最终该有的高度比。 */
+  .stage[data-measuring] .panel {
+    height: auto;
+    display: block;
   }
 
   /* ---------- 色斑层:外观在此,定位由 layouts/*.css 提供 ---------- */
@@ -315,10 +341,8 @@
     color: var(--ink-2);
   }
   /* 描边高亮:accent 在本风格只出现在四处,这是其一。
-     is-first 用于长图模式(片数=章节数,首片高亮);is-current 用于分页模式
-     (片数=总页数,当前页高亮)——两套语义不同,不能共用同一个类名,
-     但视觉处理相同,合并选择器。 */
-  .rail-cell.is-first,
+     片数 = 总页数,当前页高亮——导航片就是轮播的页码指示器,只有这一种语义
+     (长图时代那套"片数=章节数、首片高亮"的 is-first 已随长图模式一并删除)。 */
   .rail-cell.is-current {
     border-color: var(--p-accent);
     color: var(--ink);
@@ -329,6 +353,10 @@
     display: grid;
     grid-template-columns: var(--p-grid-cols);
     column-gap: var(--p-column-gap);
+    /* 章节区吃掉面板扣除头版与页脚后的全部剩余高度,富余空间均摊到块之间
+       与两端,盒子保持内容自然高度(三版迭代的缘由见上方"空白治理") */
+    flex: 1;
+    align-content: space-evenly;
   }
   .section {
     grid-column: span 1;
@@ -592,26 +620,9 @@
     field.innerHTML = html;
   }
 
-  /* 章节导航片(E5)。含义随画布模式变化,不能共用一份计算逻辑:
-       长图模式:片数 = **实际渲染的**章节数,首片高亮(is-first)。
-                这是改造前的行为,原样保留——不分页的四个骨架不该因为
-                分页功能上线而多出一个像素的变化。
-       分页模式:片数 = **总页数**,当前页高亮(is-current)。此时片数与
-                章节数不再相等(6 块内容可能只出 3 页),必须是独立的计算。 */
-  function renderRailSections(blocks) {
-    const rail = document.getElementById('chapter-rail');
-    const cells = Math.min((blocks || []).length, 6);
-    let html = '';
-    for (let i = 0; i < cells; i++) {
-      html += `<div class="rail-cell${i === 0 ? ' is-first' : ''}">` +
-              `${String(i + 1).padStart(2, '0')}</div>`;
-    }
-    rail.innerHTML = html;
-  }
-
-  /* 分页模式专用的导航片渲染,片数=总页数,不再像 renderRailSections() 那样
-     封顶 6——块数上限撤销后(2026-07-28)总页数不设上限,故这里改成自适应
-     收缩片尺寸而不是砍片数(截断会让"你在第几张"这条信息本身失真)。 */
+  /* 章节导航片(E5):片数 = 总页数,当前页高亮——它是轮播的页码指示器。
+     不封顶片数:块数上限撤销后(2026-07-28)总页数不设上限,截断会让
+     "你在第几张"这条信息本身失真,故改为自适应收缩片尺寸。 */
   function renderRail(current, total, desiredCellSize) {
     const rail = document.getElementById('chapter-rail');
     // 可用长度取 .head 的对应边:.head 没有任何骨架给它设 width/display,
@@ -706,8 +717,7 @@
     }
 
     /* 内容池:顺序即优先级,最重要的写在前面。2026-07-28 起取消 6 块硬上限
-       (见 STYLE.md 4.3)——长图分支自己的 layout.blockLimit 取值域本就 ≤6,
-       不受影响;分页分支下块数不再决定"塞不塞得下",只决定"出几张图"。
+       (见 STYLE.md 4.3)——块数不再决定"塞不塞得下",只决定"出几张图"。
        startIndex 同时驱动 data-i 与 sec-no:章节编号全局连续
        (页二接着页一的编号往下排),不是每页各自从 01 重新数,
        这样轮播读起来像一份连续的文档,不是互不相干的片段。 */
@@ -716,21 +726,19 @@
     const stage = document.getElementById('stage');
     const grid = document.getElementById('grid');
 
+    /* 本风格只出定高 3:4 分页图,canvas.height 不可留空(space.json 已收回
+       free)。缺值时直接报错而不是悄悄退回长图——静默降级会让调用方拿到一张
+       比例完全不同的图却不知道出了事。 */
     if (!canvasHeight) {
-      /* 长图分支:改造前的行为原样保留,不接自动断页(那是分页分支专属)。 */
-      const limit = Number(params['layout.blockLimit'] ?? 4);
-      const blocks = pool.slice(0, limit);
-      stage.dataset.page = 1;
-      stage.dataset.role = 'cover';
-      renderRailSections(blocks);
-      commitBlocks(pool, 0, blocks.length, grid);
-      return { page: 1, pages: 1, overflow: false };
+      throw new Error(
+        'aurora-glass 需要非空的 canvas.height(本风格只出定高分页图,' +
+        '长图模式已于 2026-07-28 取消);实收: ' + JSON.stringify(params['canvas.height']));
     }
 
-    /* 分页分支:引擎自己量每页能装几块,不再由 coverBlocks/blocksPerPage
-       这类手调旋钮决定(STYLE.md 4.3)。每次 renderCard() 调用都从头重算
-       一遍这份方案(不缓存)——render.py 对每一页各起一次独立的 evaluate()
-       调用,互不共享状态,必须能仅从 (data, params) 复原出同一份方案。 */
+    /* 引擎自己量每页能装几块,不再由 coverBlocks/blocksPerPage 这类手调旋钮
+       决定(STYLE.md 4.3)。每次 renderCard() 调用都从头重算一遍这份方案
+       (不缓存)——render.py 对每一页各起一次独立的 evaluate() 调用,
+       互不共享状态,必须能仅从 (data, params) 复原出同一份方案。 */
     const panel = stage.querySelector('.panel');
     const { plan, overflow } = buildPagingPlan(pool, canvasHeight, stage, grid, panel);
 
@@ -751,14 +759,34 @@
                Number(params['layout.railSize'] ?? 56));
     commitBlocks(pool, target.startIndex, target.count, grid);
 
-    /* 溢出测量沿用改造前的口径:量 .panel 底边相对画布顶部(= 视口顶部,
-       .stage 无外边距)的距离,不拿某个 inset 参数去反推——用几何位置
-       直接判断,任何骨架改了 .panel 的盒模型都不会让这条检测失真。
-       此处不会真的溢出(buildPagingPlan 已经保证选中的方案装得下),
-       测出来只是如实报给 render.py,契约不变。 */
-    const bottom = Math.round(panel.getBoundingClientRect().bottom);
+    /* 此处不会真的溢出(buildPagingPlan 已保证选中的方案装得下),
+       如实测一次报给 render.py,契约不变。 */
     return { page: pageNum, pages: totalPages, overflow: false,
-             contentHeight: bottom, canvasHeight };
+             contentHeight: Math.round(measureNaturalHeight(stage, panel)),
+             canvasHeight };
+  }
+
+  /* 量出 .panel 按内容自然撑开时的高度,以及它最终**允许**占用的高度。
+
+     必须先切到测量态(见 CSS 的 [data-measuring] 规则)再量:续页的 .panel
+     是定高的,不摘掉那个高度,量到的永远是那个常数,自动断页会以为什么都
+     装得下。摘高度这件事只能在这里做——它是引擎的内部实现细节,骨架不该
+     知道,更不该由骨架各自去处理。 */
+  function measureNaturalHeight(stage, panel) {
+    const prevRole = stage.dataset.role;
+    stage.dataset.measuring = '1';
+    const height = panel.getBoundingClientRect().height;
+    delete stage.dataset.measuring;
+    stage.dataset.role = prevRole;
+    return height;
+  }
+
+  /* 面板最终能占的高度 = 画布高 - 上下两条 inset。
+     inset 从 .panel 的实际 margin 读,不从参数反推——骨架若改了盒模型,
+     读计算样式仍然是对的。 */
+  function panelHeightLimit(canvasHeight, panel) {
+    const inset = parseFloat(getComputedStyle(panel).marginTop) || 0;
+    return canvasHeight - inset * 2;
   }
 
   /* 把内容池的 [startIndex, startIndex+count) 一段写进 #grid,
@@ -782,7 +810,9 @@
 
   /* 分页方案:量→装→平衡。
      量/装 —— 每页从 startIndex 起贪心加块,加一块就实际渲染一次、量
-       .panel 底边是否超出画布,超了就回退到上一个装得下的块数,翻页。
+       面板按内容自然撑开的高度是否超出它最终能占的高度,超了就回退到上一个
+       装得下的块数,翻页。量的是**自然高度**而不是面板的实际盒子——续页的
+       面板是定高的,量盒子永远得到那个常数(详见 measureNaturalHeight)。
        用真实渲染测量而不是在 JS 里重算网格打包,是因为两栏/不等宽栏/
        dense 回填/逐块跨度这些排布规则全在 CSS 里,JS 重算一遍等于把
        六个骨架的排布逻辑抄一遍,还随时可能抄漏。
@@ -803,15 +833,17 @@
       const role = pageN === 1 ? 'cover' : 'cont';
       stage.dataset.role = role; // 影响 .head 的高度(封面/续页不同),须先于测量设置
 
+      const limit = panelHeightLimit(canvasHeight, panel);
       let k = 0;
       while (startIndex + k < pool.length) {
         const tryK = k + 1;
         commitBlocks(pool, startIndex, tryK, grid);
-        const bottom = Math.round(panel.getBoundingClientRect().bottom);
-        if (bottom > canvasHeight + 0.5) {
+        const natural = measureNaturalHeight(stage, panel);
+        if (natural > limit + 0.5) {
           if (tryK === 1) {
             // 单独一块自己就比一页高,不是"装不下就翻页"能解的问题(H10)
-            return { plan, overflow: { page: pageN, blockIndex: startIndex, bottom } };
+            return { plan, overflow: { page: pageN, blockIndex: startIndex,
+                                       bottom: Math.round(natural) } };
           }
           commitBlocks(pool, startIndex, k, grid); // 回退到上一个可行状态
           break;
@@ -837,8 +869,7 @@
     const candidateCount = last.count + 1;
     stage.dataset.role = last.role;
     commitBlocks(pool, candidateStart, candidateCount, grid);
-    const bottom = Math.round(panel.getBoundingClientRect().bottom);
-    if (bottom <= canvasHeight + 0.5) {
+    if (measureNaturalHeight(stage, panel) <= panelHeightLimit(canvasHeight, panel) + 0.5) {
       prev.count -= 1;
       last.startIndex = candidateStart;
       last.count = candidateCount;

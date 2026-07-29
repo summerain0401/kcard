@@ -169,10 +169,17 @@ def check_engine_defaults(style_name, tmp_dir):
         style_name, layout_name, f"regress --engine-defaults({preset_paths[0].name})")
 
     import copy
+    # "空参数"这一侧并非真的传 {}:render.py 自己在 Python 层消费 canvas.height
+    # (据此决定视口截图还是 full_page、以及画布多高),这一档不给值,两次渲染
+    # 会在 render.py 层面就分道扬镳,页数不同,校验退化成误报。故只补这一个键,
+    # 其余全部留空交给引擎 :root 兜底——那才是本检查要验的东西。
+    render_level_keys = {"canvas.height"}
+    minimal = {k: defaults[k] for k in render_level_keys if k in defaults}
+
     empty_out = tmp_dir / f"{style_name}-engine-defaults-empty.png"
     full_out = tmp_dir / f"{style_name}-engine-defaults-full.png"
     written_empty = render.render_page(
-        engine_path, layout_path, copy.deepcopy(data_template), {}, empty_out)
+        engine_path, layout_path, copy.deepcopy(data_template), minimal, empty_out)
     written_full = render.render_page(
         engine_path, layout_path, copy.deepcopy(data_template), defaults, full_out)
 

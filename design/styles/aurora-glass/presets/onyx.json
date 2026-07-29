@@ -59,7 +59,6 @@
     "type.bodyLeading": 1.62,
     "type.labelSize": 16,
     "type.labelTracking": 4,
-    "layout.blockLimit": 5,
     "layout.columnGap": 40,
     "layout.panelPadding": [
       56,

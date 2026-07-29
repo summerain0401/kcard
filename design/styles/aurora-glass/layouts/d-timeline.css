@@ -90,3 +90,35 @@
 .section.span-full {
   grid-column: auto;
 }
+
+/* ---- 续页(第 2 张起)----
+   头版收缩、标题缩放、章节区吃掉剩余高度并垂直居中,由 engine.html 的
+   [data-role="cont"] 通用规则处理。
+
+   **时间线竖线刻意不动**:章节区在续页会吃掉面板的全部剩余高度,竖线随之
+   贯穿上下缘,而块组垂直居中——线从画面外来、往画面外去,正好读成"这一段
+   还在继续",与轮播的语义天然吻合。这是本骨架在分页下白捡的一个好处,
+   不要为了"让线包住块"去把它截短,那反而会把连续读成一段段。
+
+   本骨架必须处理的是标题组:封面把它压在主体右侧偏下,横纵两个坐标都由
+   --p-hero-size 推出来。续页主体隐藏了,那两个坐标就成了凭空的偏移——
+   标题会悬在离左缘 344px、离顶 126px 的地方,既压着章节区又对不齐任何一条线。
+   故两个坐标都要重写:横向回到左缘对齐线,纵向改为自下缘堆叠。 */
+.stage[data-role="cont"] .hero-slot {
+  display: none;
+}
+
+.stage[data-role="cont"] .head-title {
+  left: 0;
+  /* 让开右缘的竖排导航片一个身位,两者不叠 */
+  right: calc(var(--p-rail-size) + 32px);
+  top: auto;
+  bottom: calc(var(--p-subtitle-size) * 1.7 + 18px);
+}
+
+.stage[data-role="cont"] .head-sub {
+  left: 0;
+  right: calc(var(--p-rail-size) + 32px);
+  top: auto;
+  bottom: 14px;
+}

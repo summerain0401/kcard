@@ -69,3 +69,33 @@
 .section.span-full {
   grid-column: auto;
 }
+
+/* ---- 续页(第 2 张起)----
+   头版收缩、标题缩放、章节区吃掉剩余高度并垂直居中,由 engine.html 的
+   [data-role="cont"] 通用规则处理。本骨架只需做两件事:
+
+   1. 隐藏主体,把左半区还出来。
+   2. 标题组从右半区(封面的 left:56%)移到导航片右侧,并改为自下缘锚定。
+      竖排导航片是本骨架的标志,续页保留不动——它与章节区共用同一条左对齐线,
+      那条线是整版的锚,续页丢掉它就认不出是同一套排版了。标题因此要让开
+      一个身位,复用主体在封面让位时的同一个偏移量。
+   章节区本就是单栏,不必再改。 */
+.stage[data-role="cont"] .hero-slot {
+  display: none;
+}
+
+.stage[data-role="cont"] .head-title {
+  left: calc(var(--p-rail-size) + 40px);
+  right: 0;
+  /* 自下缘堆叠,而不是沿用封面的 top:42%——42% 是按封面头版高算的,
+     续页头版矮得多,按比例定位会把标题压进章节区。 */
+  top: auto;
+  bottom: calc(var(--p-subtitle-size) * 1.7 + 18px);
+}
+
+.stage[data-role="cont"] .head-sub {
+  left: calc(var(--p-rail-size) + 40px);
+  right: 0;
+  top: auto;
+  bottom: 14px;
+}

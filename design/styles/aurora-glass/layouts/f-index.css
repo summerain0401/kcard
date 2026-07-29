@@ -75,3 +75,36 @@
 .section.span-full {
   grid-column: auto;
 }
+
+/* ---- 续页(第 2 张起)----
+   头版收缩、标题缩放、章节区吃掉剩余高度并垂直居中,由 engine.html 的
+   [data-role="cont"] 通用规则处理。块内那套"编号标题在左、正文在右"的
+   目录式两列**照旧生效**——它是块自身的内部构造,与分页无关,续页保留它
+   才认得出还是同一本工具书。
+
+   本骨架要处理两件事:
+
+   1. 隐藏字母印记。它在封面被扶正成主角、撑满右半区;续页若留着,一个
+      巨大的 S 压在两行小字后面只会是噪音。
+   2. 标题组收回满宽,并**显式让开导航片**再逐层向上堆。
+      ⚠ 这里踩过一次,值得记下:封面那两条 bottom 是拿 --p-title-size 乘
+      系数算的;续页照抄这个写法、只把基准换成缩放后的 --p-cont-title-size,
+      结果副标题被导航片压住——标题字号缩了(90 → 37.8),导航片却不缩
+      (仍是 layout.railSize 那么高),按字号比例推出来的 27px 直接钻到
+      46px 高的片底下去了。凡是"底部有横排导航片"的骨架,下缘堆叠都必须把
+      --p-rail-size 显式加进去,不能靠字号比例去凑——另外三个横排骨架
+      (b/c/e)封面规则里本就写了 --p-rail-size,所以续页沿用即正确,
+      只有本骨架当初图省事按比例推,才踩了这个坑。 */
+.stage[data-role="cont"] .hero-slot {
+  display: none;
+}
+
+.stage[data-role="cont"] .head-title {
+  width: 100%;
+  bottom: calc(var(--p-rail-size) + var(--p-subtitle-size) * 1.7 + 20px);
+}
+
+.stage[data-role="cont"] .head-sub {
+  width: 100%;
+  bottom: calc(var(--p-rail-size) + 16px);
+}
