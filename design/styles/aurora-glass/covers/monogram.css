@@ -1,0 +1,96 @@
+/* monogram — 封面骨架:字母印记当海报,不放任何章节内容
+ *
+ * 这是 aurora-glass 的第一个**封面骨架**,与 layouts/ 下的六个「整卡骨架」
+ * 不是同一个品类,不可互换(拿封面骨架当整卡骨架用会丢掉全部章节内容)。
+ * 两者的分工:
+ *
+ *   covers/*.css    只渲一张,不参与内容池分页,由 render.py 单独走一趟
+ *   layouts/*.css   渲正文页,内容池在这里按引擎自动断页
+ *
+ * 出图 = 1 张封面(covers) + N 张正文页(layouts)。
+ *
+ * 为什么要专用封面:目标平台的信息流里只有第一张会被大量人看到,它是
+ * 缩略图、是点击率的唯一来源。整卡骨架的第一页要同时承担"标题页"和
+ * "装内容"两件事,两边都做不好——章节区 820px 只装得下 1 块,剩下的
+ * 空白既不是内容也不是构图(实测占封面高度 33%)。拆开之后,封面可以
+ * 纯为缩略图而设计,正文页可以纯为阅读而分页。
+ *
+ * 本骨架的取舍:**钩子行是主角,字母印记是材质**。印记虽然巨大,但引擎给它的
+ * 是 0.09 填充 + 0.22 描边,读起来是版面上的一块材质而不是一个字(E7);
+ * 真正要被读完的是那句 tagline,所以它是唯一的高对比文字。两者不抢。
+ *
+ * 选择器全部挂在 .stage[data-mode="poster"] 上——那是 renderCover() 才会设的
+ * 标记。整卡骨架的第一页 data-role 也是 'cover',单靠 role 区分不开专用封面。
+ */
+
+/* ---- 章节区在封面上不存在 ----
+   用 display:none 彻底移除,不是压高度:留着它仍会参与 .panel 的 flex 分配,
+   头版就吃不到全部剩余高度。 */
+.stage[data-mode="poster"] .grid {
+  display: none;
+}
+
+/* 头版吃掉面板扣除页脚后的全部高度,构图完全自由。
+   height:auto 是为了解除引擎的 .head { height: var(--p-header-height) }——
+   封面没有"头版 / 章节区"之分,整张就是头版。 */
+.stage[data-mode="poster"] .head {
+  flex: 1;
+  height: auto;
+}
+
+/* ---- 字母印记:压住上半区,略微出右缘 ----
+   尺寸公式在 engine.html 的 [data-mode="poster"] .hero-mark 里,这里只摆位置。
+   right 取负值让它探进面板内边距,读起来是"更大的东西的一角"。 */
+.stage[data-mode="poster"] .hero-slot {
+  top: 0;
+  right: -6%;
+  width: calc(var(--p-canvas-h) * 0.40 * var(--p-cover-mark-scale));
+  height: calc(var(--p-canvas-h) * 0.40 * var(--p-cover-mark-scale));
+}
+
+/* ---- 导航片:横排贴底缘左侧,和其余文字共用同一条左对齐线 ---- */
+.stage[data-mode="poster"] .chapter-rail {
+  left: 0;
+  bottom: 0;
+  flex-direction: row;
+}
+
+/* ---- 文字自下而上堆叠:导航片 → 钩子行 → 副标题 → 标题 ----
+   每一层都**显式**把 --p-rail-size 算进去。STYLE.md 5.3 记过这个坑:
+   按字号比例去推下缘偏移,导航片不随字号缩,推出来的值会比片矮,
+   文字被页码条压住。这里从一开始就按"片高 + 实际行高"逐层累加。
+
+   钩子行一律按**两行**预留高度(--p-cover-tagline-size * 1.45 * 2):
+   一行的钩子只是多留一点空气,两行的不会顶到副标题。用固定预留而不是
+   让它自然撑开、上面各层跟着浮动,是因为副标题与标题都是绝对定位,
+   浮动的话每张卡的标题位置都不一样,一组卡片翻起来会跳。 */
+.stage[data-mode="poster"] .cover-tagline {
+  display: block;
+  left: 0;
+  width: 100%;
+  bottom: calc(var(--p-rail-size) + 52px);
+}
+
+.stage[data-mode="poster"] .head-sub {
+  left: 0;
+  width: 100%;
+  bottom: calc(var(--p-rail-size) + 52px
+               + var(--p-cover-tagline-size) * 1.45 * 2
+               + 44px);
+}
+
+.stage[data-mode="poster"] .head-title {
+  left: 0;
+  width: 100%;
+  bottom: calc(var(--p-rail-size) + 52px
+               + var(--p-cover-tagline-size) * 1.45 * 2
+               + 44px
+               + var(--p-subtitle-size) * 1.7);
+}
+
+/* ---- 色斑:主色压右上给印记一个发光的底,近白色斑压左下托住文字区 ----
+   构图是骨架职责(引擎只算色斑的颜色与尺寸,top/left 全部由骨架给)。 */
+.stage[data-mode="poster"] .orb-1 { top: -300px; right: -220px; }
+.stage[data-mode="poster"] .orb-2 { top: 60px;   right: 180px; }
+.stage[data-mode="poster"] .orb-3 { bottom: -320px; left: -260px; }
+.stage[data-mode="poster"] .orb-4 { bottom: -180px; right: -140px; }

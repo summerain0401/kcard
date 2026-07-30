@@ -1,6 +1,7 @@
 {
   "style": "aurora-glass",
   "preset": "quartz",
+  "cover": "monogram",
 
   "params": {
     "palette.accent": null,

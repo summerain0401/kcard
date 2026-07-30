@@ -56,14 +56,32 @@ def count_hard_constraints(style_md_text):
     return len(re.findall(r"^\| H\d+ \|", style_md_text, re.M))
 
 
-def parse_layouts(style_dir):
-    layouts = []
-    for css_path in sorted((style_dir / "layouts").glob("*.css")):
+def _parse_skeleton_dir(style_dir, sub):
+    """解析 layouts/ 或 covers/ 下的骨架:名称与简介都取自 CSS 首行注释。
+
+    两者的注释格式相同、解析相同,但**品类不同**:layouts/ 是整卡骨架(渲正文页,
+    内容池在那里分页),covers/ 是封面骨架(只渲一张,不放任何章节块),互相不可
+    替换。目录不存在时返回空列表——没有封面骨架的风格,看板输出与本函数
+    存在之前逐字节相同。
+    """
+    items = []
+    target = style_dir / sub
+    if not target.exists():
+        return items
+    for css_path in sorted(target.glob("*.css")):
         first_line = css_path.read_text(encoding="utf-8").splitlines()[0]
         m = LAYOUT_HEADER_RE.match(first_line)
         name, desc = (m.group(1), m.group(2)) if m else (css_path.stem, "")
-        layouts.append({"name": name, "desc": desc})
-    return layouts
+        items.append({"name": name, "desc": desc})
+    return items
+
+
+def parse_layouts(style_dir):
+    return _parse_skeleton_dir(style_dir, "layouts")
+
+
+def parse_covers(style_dir):
+    return _parse_skeleton_dir(style_dir, "covers")
 
 
 def parse_presets(style_dir):
@@ -107,6 +125,7 @@ def load_style(style_dir):
         "summary": extract_summary(style_md_text),
         "hard_constraint_count": count_hard_constraints(style_md_text),
         "layouts": parse_layouts(style_dir),
+        "covers": parse_covers(style_dir),
         "presets": parse_presets(style_dir),
         "used_by": used_by(style_dir.name),
     }
@@ -124,13 +143,25 @@ def render_style_section(style):
     lines.append(f"| 被哪些组使用 | {', '.join(f'`{g}`' for g in style['used_by']) or '(暂无)'} |")
     lines.append("")
 
-    lines.append("**骨架**")
+    lines.append("**整卡骨架**(`layouts/`,渲正文页,内容池在这里分页)")
     lines.append("")
     lines.append("| 名称 | 简介 |")
     lines.append("|---|---|")
     for layout in style["layouts"]:
         lines.append(f"| `{layout['name']}` | {layout['desc']} |")
     lines.append("")
+
+    # 封面骨架是另一个品类,与整卡骨架不可替换,故单列一张表而不是混进上表。
+    # 没有 covers/ 的风格整段不输出,看板对它们逐字节不变。
+    if style["covers"]:
+        lines.append("**封面骨架**(`covers/`,只渲一张,不放章节内容;生产组用 "
+                     "`profile.json` 的 `cover` 字段选用)")
+        lines.append("")
+        lines.append("| 名称 | 简介 |")
+        lines.append("|---|---|")
+        for cover in style["covers"]:
+            lines.append(f"| `{cover['name']}` | {cover['desc']} |")
+        lines.append("")
 
     # 骨架列是必须的:一套搭配 = 选骨架 + 定参数,不写出来生产部就得翻 presets/*.json
     # 才知道某套配色配的是哪个版式。layout 字段 parse_presets() 早就取了,只是从前没渲染。

@@ -7,9 +7,10 @@ render.py - 知识卡片渲染脚本(风格无关)
 
 <card_dir> 形如 production/<group>/cards/<topic>。渲染链路:
 
-    production/<group>/profile.json     选定 style / preset / layout,并覆写参数
+    production/<group>/profile.json     选定 style / preset / layout / cover,并覆写参数
       → design/styles/<style>/presets/<preset>.json    示范搭配(参数基线)
-      → design/styles/<style>/layouts/<layout>.css     版式骨架(头版定位)
+      → design/styles/<style>/layouts/<layout>.css     整卡骨架(正文页)
+      → design/styles/<style>/covers/<cover>.css       封面骨架(可选,只渲一张)
       → design/styles/<style>/engine.html              参数化渲染引擎
       → <card_dir>/card.json 的 data                   卡片内容
       → <card_dir>/output.png
@@ -29,6 +30,11 @@ accent 优先级:params["palette.accent"](组级固定色)> card.json 的 themeC
   画布定高,render.py 改用视口截图,按 renderCard() 返回的 pages 循环出图,
   写成 output-01.png / output-02.png / ...;内容溢出画布直接抛 RenderOverflow,
   不静默裁切
+- 专用封面(可选):profile/preset 声明 cover 时,engine.html 还须挂载
+  window.renderCover(data, params, {totalPages}),且风格要有 covers/<cover>.css。
+  封面单独走一趟渲染(另起页面注入 covers/ 而非 layouts/ 的 CSS),独占
+  output-01.png,正文页序号整体后移一位。封面不参与内容池分页,不经过
+  RenderOverflow 那道闸门。不声明 cover 则完全不走这条路
 - 头版定位不在 engine.html 里,由 layouts/<layout>.css 提供,渲染时注入
 - data 中约定的图片字段(如 "hero")若是 <card_dir> 内的相对文件名且文件存在,
   render.py 会自动换成 file:// 绝对 URI 再传给引擎;不存在则原样传入,
@@ -88,7 +94,10 @@ def parse_args():
                         help="风格自证预览:风格名。用风格自带的 sample.json 出图,不碰 production/")
     parser.add_argument("--preset", type=str, help="风格自证预览:搭配名")
     parser.add_argument("--layout", type=str,
-                        help="风格自证预览:覆写骨架(默认用搭配指定的)")
+                        help="风格自证预览:覆写整卡骨架(默认用搭配指定的)")
+    parser.add_argument("--cover", type=str,
+                        help="风格自证预览:指定封面骨架(covers/<name>.css),"
+                             "多出一张专用封面。默认用搭配指定的,搭配没指定则不出封面")
     args = parser.parse_args()
 
     if args.style and not args.preset:
@@ -265,7 +274,59 @@ def resolve_style_assets(style_name, layout_name, source_desc):
     return engine_path, layout_path
 
 
-def render_on_page(browser, engine_path, layout_path, data, params, out_path):
+def resolve_cover_asset(style_name, cover_name, source_desc):
+    """定位封面骨架 design/styles/<style>/covers/<name>.css。
+
+    封面骨架与 layouts/ 下的整卡骨架**不是同一个品类**,不可互换:整卡骨架
+    渲正文页、内容池在那里分页;封面骨架只渲一张,且不放任何章节块。分两个
+    目录而不是靠命名约定区分,是因为拿封面骨架当整卡骨架用会静默丢掉全部
+    内容——这种错误必须在"找不到文件"这一层就撞死,而不是渲出一张空卡。
+
+    cover_name 为空(生产组没配 cover)时返回 None,调用方据此走单趟渲染,
+    行为与本函数存在之前完全一致。
+    """
+    if not cover_name:
+        return None
+
+    cover_path = STYLES_DIR / style_name / "covers" / f"{cover_name}.css"
+    if not cover_path.exists():
+        print(f"错误: 找不到封面骨架 {cover_path}(由 {source_desc} 指定)", file=sys.stderr)
+        sys.exit(1)
+
+    return cover_path
+
+
+def _render_cover_image(browser, engine_path, cover_path, data, params,
+                        out_path, total_images):
+    """单独走一趟渲出封面,写成 <stem>-01.png。
+
+    为什么另起一个 page 而不是在正文那趟里换 CSS:骨架 CSS 是 add_style_tag
+    注入的,注入后没有干净的撤销手段。换一页重新 goto 才能保证封面只受
+    covers/*.css 影响、正文页只受 layouts/*.css 影响——多起一个页面的开销,
+    远小于两套 CSS 互相污染时的排查成本。
+
+    total_images 是**轮播总张数**(封面 1 张 + 正文 N 张),给导航片(E5)数用,
+    所以调用方必须先渲完正文、拿到 N 才能来渲封面。
+    """
+    page = browser.new_page(viewport=VIEWPORT, device_scale_factor=DEVICE_SCALE_FACTOR)
+    page.goto(engine_path.as_uri())
+    page.add_style_tag(path=str(cover_path))
+    page.evaluate("document.fonts.ready")
+    page.set_viewport_size(
+        {"width": VIEWPORT["width"], "height": int(params["canvas.height"])})
+    page.evaluate(
+        "({data, params, info}) => renderCover(data, params, info)",
+        {"data": data, "params": params, "info": {"totalPages": total_images}})
+    page.evaluate("document.fonts.ready")
+
+    cover_out = out_path.with_name(f"{out_path.stem}-01{out_path.suffix}")
+    page.screenshot(path=str(cover_out))
+    page.close()
+    return cover_out
+
+
+def render_on_page(browser, engine_path, layout_path, data, params, out_path,
+                   cover_path=None):
     """在已有的 browser 实例上开一个新页渲染。batch.py 批量产卡时复用同一个
     browser 调用本函数,免去每张卡各起一次 Chromium 进程的开销。
 
@@ -274,8 +335,21 @@ def render_on_page(browser, engine_path, layout_path, data, params, out_path):
     分页模式下画布定高,按 renderCard() 报告的总页数循环出图,写成
     <out_path 主干>-01.png / -02.png / ...;某页溢出画布则抛 RenderOverflow,
     不静默裁切,由调用方决定怎么处理(batch.py 逐卡捕获继续,单卡渲染直接报错)。
+
+    cover_path 非空时多走一趟**专用封面**(见 _render_cover_image):封面独占
+    -01.png,正文页序号整体后移一位。封面不参与内容池分页,也不经过 H10 那道
+    溢出闸门——那道闸门的适用范围一点没变,仍然只管正文页。cover_path 为空时
+    整个流程与本参数存在之前逐位相同。
     """
     canvas_height = params.get("canvas.height")
+
+    # 长图没有"第几张"的概念,专用封面在那条路上没有意义。宁可报错也不静默
+    # 忽略配置——生产组明明配了 cover 却没出封面,是最难发现的一类错。
+    if cover_path and not canvas_height:
+        print(f"错误: {out_path.stem} 配了封面骨架 {cover_path.name},但该搭配是长图模式"
+              f"(canvas.height 为空);封面只在定高分页模式下有意义", file=sys.stderr)
+        sys.exit(1)
+
     page = browser.new_page(viewport=VIEWPORT, device_scale_factor=DEVICE_SCALE_FACTOR)
     page.goto(engine_path.as_uri())
     # 骨架 CSS 在引擎样式之后注入,同优先级下后者生效
@@ -294,10 +368,10 @@ def render_on_page(browser, engine_path, layout_path, data, params, out_path):
     # 分页模式:画布定高,不用 full_page——视口本身就是画布,截出来正好是整张。
     page.set_viewport_size({"width": VIEWPORT["width"], "height": int(canvas_height)})
 
-    def render_page_n(n):
+    def render_page_n(n, rail_info=None):
         info = page.evaluate(
-            "({data, params, n}) => renderCard(data, params, n)",
-            {"data": data, "params": params, "n": n})
+            "({data, params, n, rail}) => renderCard(data, params, n, rail)",
+            {"data": data, "params": params, "n": n, "rail": rail_info or {}})
         page.evaluate("document.fonts.ready")
         if info.get("overflow"):
             page.close()
@@ -314,26 +388,44 @@ def render_on_page(browser, engine_path, layout_path, data, params, out_path):
                 f"(共 {info.get('pages')} 页{block_note})")
         return info
 
+    # 先探一次拿正文总页数。此时还不知道导航片要不要加偏移,所以下面循环里
+    # 第 1 页要带着 rail_info 再渲一遍——渲染是确定性的,offset 为 0 时重渲
+    # 出的字节与这次探测完全相同,代价只是多一次 evaluate。
     info = render_page_n(1)
     pages = int(info.get("pages", 1))
+
+    # 配了专用封面:封面占掉 -01.png,正文页序号整体后移一位;导航片(E5)也要
+    # 按轮播总张数来数,否则 4 张图的轮播上会写着"共 3 页"。
+    offset = 1 if cover_path else 0
+    total_images = pages + offset
+    rail_info = {"offset": offset, "total": total_images} if offset else None
+
     written = []
     for n in range(1, pages + 1):
-        if n > 1:
-            render_page_n(n)
-        page_path = out_path.with_name(f"{out_path.stem}-{n:02d}{out_path.suffix}")
+        render_page_n(n, rail_info)
+        page_path = out_path.with_name(
+            f"{out_path.stem}-{n + offset:02d}{out_path.suffix}")
         page.screenshot(path=str(page_path))
         written.append(page_path)
     page.close()
+
+    # 封面必须最后渲(要先知道正文有几页才能给导航片报总数),但排在列表最前
+    if cover_path:
+        written.insert(0, _render_cover_image(
+            browser, engine_path, cover_path, data, params, out_path, total_images))
+
     _cleanup_stale_outputs(out_path, written)
     return written
 
 
-def render_page(engine_path, layout_path, data, params, out_path):
+def render_page(engine_path, layout_path, data, params, out_path, cover_path=None):
     """加载引擎 → 注入骨架 CSS → 注入数据与参数 → 截图(长图或分页,见 render_on_page)。
-    单卡渲染用,自行管理 browser 生命周期(用完即关)。返回写出的文件路径列表。"""
+    单卡渲染用,自行管理 browser 生命周期(用完即关)。返回写出的文件路径列表。
+    cover_path 非空时多出一张专用封面,语义与 render_on_page 一致。"""
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        written = render_on_page(browser, engine_path, layout_path, data, params, out_path)
+        written = render_on_page(browser, engine_path, layout_path, data, params,
+                                 out_path, cover_path)
         browser.close()
         return written
 
@@ -364,6 +456,11 @@ def run_preview(args):
     engine_path, layout_path = resolve_style_assets(
         style_name, layout_name, f"搭配 {preset_name}")
 
+    # 封面骨架也要能自证:设计部得能在不碰 production/ 的前提下迭代封面构图,
+    # 否则改一次封面就得借一个生产组的卡来看效果,独立性就破了。
+    cover_name = args.cover or preset.get("cover")
+    cover_path = resolve_cover_asset(style_name, cover_name, f"搭配 {preset_name}")
+
     if params.get("palette.accent"):
         data["themeColor"] = params["palette.accent"]
 
@@ -371,12 +468,13 @@ def run_preview(args):
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / f"{preset_name}.png"
 
-    written = render_page(engine_path, layout_path, data, params, out_path)
+    written = render_page(engine_path, layout_path, data, params, out_path, cover_path)
+    desc = f"{preset_name} / {layout_name}" + (f" / 封面 {cover_name}" if cover_path else "")
     if len(written) == 1:
-        print(f"已渲染风格预览({preset_name} / {layout_name}) -> {written[0]}")
+        print(f"已渲染风格预览({desc}) -> {written[0]}")
     else:
         names = ", ".join(str(p) for p in written)
-        print(f"已渲染风格预览({preset_name} / {layout_name},共 {len(written)} 页) -> {names}")
+        print(f"已渲染风格预览({desc},共 {len(written)} 张) -> {names}")
 
 
 def resolve_card(card_dir):
@@ -384,7 +482,8 @@ def resolve_card(card_dir):
     但不动手渲染。batch.py / regress.py 需要在遍历多张卡时复用这一步,
     单卡渲染的 run_card() 也走这个函数,两条路径不重复实现。
 
-    返回 (engine_path, layout_path, data, params, out_path)。
+    返回 (engine_path, layout_path, data, params, out_path, cover_path)。
+    cover_path 为 None 表示这个组没配专用封面,只出正文页。
     """
     card_json_path = card_dir / "card.json"
     group_dir = card_dir.parent.parent
@@ -425,6 +524,12 @@ def resolve_card(card_dir):
     engine_path, layout_path = resolve_style_assets(
         style_name, layout_name, f"{profile_path} 与搭配 {preset_name}")
 
+    # 封面骨架:可选。配了就多出一张专为信息流缩略图设计的封面(见
+    # resolve_cover_asset),不配就照旧只出正文页,行为与本字段存在之前相同。
+    cover_name = profile.get("cover") or preset.get("cover")
+    cover_path = resolve_cover_asset(
+        style_name, cover_name, f"{profile_path} 与搭配 {preset_name}")
+
     assets = resolve_asset_uris(data, card_dir)
 
     # accent 优先级:组级固定色 > 单卡 themeColor > 从主图自动取色
@@ -437,13 +542,13 @@ def resolve_card(card_dir):
             print(f"主题色取自主图 -> {accent}")
 
     out_path = card_dir / "output.png"
-    return engine_path, layout_path, data, params, out_path
+    return engine_path, layout_path, data, params, out_path, cover_path
 
 
 def run_card(args):
     card_dir = Path(args.card_dir).resolve()
-    engine_path, layout_path, data, params, out_path = resolve_card(card_dir)
-    written = render_page(engine_path, layout_path, data, params, out_path)
+    engine_path, layout_path, data, params, out_path, cover_path = resolve_card(card_dir)
+    written = render_page(engine_path, layout_path, data, params, out_path, cover_path)
     if len(written) == 1:
         print(f"已渲染知识卡片 -> {written[0]}")
     else:

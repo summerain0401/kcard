@@ -75,8 +75,10 @@ def main():
         for card_dir in card_dirs:
             name = card_dir.name
             try:
-                engine_path, layout_path, data, params, out_path = render.resolve_card(card_dir)
-                written = render.render_on_page(browser, engine_path, layout_path, data, params, out_path)
+                (engine_path, layout_path, data, params,
+                 out_path, cover_path) = render.resolve_card(card_dir)
+                written = render.render_on_page(browser, engine_path, layout_path,
+                                                data, params, out_path, cover_path)
                 if len(written) == 1:
                     print(f"✓ {name} -> {written[0]}")
                 else:

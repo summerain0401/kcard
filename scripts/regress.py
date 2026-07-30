@@ -110,9 +110,12 @@ def diff_card(browser, card_dir, tmp_dir):
     仅分页卡在页数变化时可能非空。
     """
     tmp_stem = f"{card_dir.parent.parent.name}_{card_dir.name}"
-    engine_path, layout_path, data, params, _ = render.resolve_card(card_dir)
+    # cover_path 必须一起传下去:漏了它,重渲就少出封面那一张,页数与已提交的
+    # 文件数对不上,比对会退化成误报(find_orphan_pages 把封面当成孤儿页)。
+    engine_path, layout_path, data, params, _, cover_path = render.resolve_card(card_dir)
     written = render.render_on_page(
-        browser, engine_path, layout_path, data, params, tmp_dir / f"{tmp_stem}.png")
+        browser, engine_path, layout_path, data, params,
+        tmp_dir / f"{tmp_stem}.png", cover_path)
 
     committed = committed_paths_for(card_dir, len(written))
     orphans = find_orphan_pages(card_dir, committed)

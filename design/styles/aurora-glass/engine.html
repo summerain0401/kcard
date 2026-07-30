@@ -84,6 +84,11 @@
     --p-canvas-h: 1440px;
     --p-cont-header-h: 180px;
     --p-cont-title-scale: 0.42;
+
+    /* 封面骨架专属(covers/*.css)。整卡骨架不消费这两个变量,声明在这里
+       只是为了与 space.json 的 default 逐位对齐(regress.py 会校验)。 */
+    --p-cover-mark-scale: 1.45;
+    --p-cover-tagline-size: 58px;
   }
 
   /* 章节区的全部间距都锚定到 --p-body-size,不写 px 常量。
@@ -312,6 +317,28 @@
     -webkit-text-stroke: 1px hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / 0.22);
   }
 
+  /* 专用封面上的字母印记是唯一主视觉,尺寸另有一套公式:锚在画布高而不是
+     layout.heroSize——heroSize 是"头版里放个东西"的尺度,封面要的是海报尺度。
+     公式留在引擎(引擎管"长什么样"),倍数交给 cover.markScale
+     (封面骨架只管把它摆到哪儿)。 */
+  .stage[data-mode="poster"] .hero-mark {
+    font-size: calc(var(--p-canvas-h) * 0.30 * var(--p-cover-mark-scale));
+  }
+
+  /* 封面钩子行。默认不显示——只有封面骨架(covers/*.css)把它打开并定位。
+     整卡骨架从不填内容也从不显示它,所以这条规则对既有产物零影响。
+     字号/颜色在这里定(引擎管"长什么样"),位置由封面骨架给(骨架管"怎么摆")。 */
+  .cover-tagline {
+    display: none;
+    position: absolute;
+    font-family: var(--p-sans);
+    font-size: var(--p-cover-tagline-size);
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    color: hsl(var(--p-ink-hue) var(--p-ink-sat) var(--p-ink-light) / 0.92);
+  }
+
   /* 章节导航片(E5):一列/一排小玻璃方片,方向由骨架给 flex-direction。
      片的实际尺寸走 --p-rail-cell,不直接用 --p-rail-size——分页模式下
      renderRail() 会按页数把 --p-rail-cell 收缩到比 --p-rail-size 更小
@@ -484,6 +511,12 @@
       <div class="head-title" id="head-title"></div>
       <div class="head-sub" id="head-sub"></div>
       <div class="chapter-rail" id="chapter-rail"></div>
+      <!-- 封面钩子行,只有封面骨架用。默认 display:none,且只有 renderCover()
+           会往里填内容——整卡骨架永远看不见它,故这个节点对既有产物零像素差。
+           必须放在 .head 内部:.head 是 position:relative 的定位参照系,标题、
+           副标题、导航片都以它为基准,钩子行若挂在 .panel 下会换一个参照系,
+           那套"自下而上逐层堆叠"的算式就对不上,实测会直接压在导航片上。 -->
+      <div class="cover-tagline" id="cover-tagline"></div>
     </div>
 
     <div class="grid" id="grid"></div>
@@ -586,6 +619,12 @@
     if (has('chip.opacity')) set('--p-chip-opacity', n(params['chip.opacity']));
     if (has('chip.radius'))  set('--p-chip-radius', px(params['chip.radius']));
 
+    /* 封面骨架专属。整卡骨架不读这两个变量,但仍然必须在这里 set ——
+       resolve_params() 会把 space.json 声明过的键全量传进来,漏一条就等于
+       生产组的覆写被静默忽略(本项目把静默忽略当 bug,不当兜底)。 */
+    if (has('cover.markScale'))   set('--p-cover-mark-scale', n(params['cover.markScale']));
+    if (has('cover.taglineSize')) set('--p-cover-tagline-size', px(params['cover.taglineSize']));
+
     /* 分页模式专用,长图骨架的 preset 里这三项恒为 null/未声明,has() 为假,
        --p-canvas-h 等三个变量维持 :root 默认值(auto / 180px / 0.42),
        其中只有 --p-canvas-h:auto 真正影响渲染,另两个默认值配合
@@ -674,21 +713,13 @@
     return '';
   }
 
-  /**
-   * data    = { name, nameEn, category, themeColor, hero, blocks: [...] }
-   *           字段说明见同目录 schema.md。emoji 字段被刻意忽略(宪法 H8)。
-   * params  = space.json 的点分键名 → 值。缺省时用 :root 里的默认值。
-   * pageNum = 要渲染第几页,从 1 起。仅 canvas.height 非空(分页模式)时有意义;
-   *           长图模式忽略此参数,行为与改造前完全一致。
-   *
-   * 返回 { page, pages, overflow, contentHeight, canvasHeight }:
-   *   长图模式恒为 { page:1, pages:1, overflow:false }(调用方不读这些值);
-   *   分页模式下 render.py 用 pages 决定要循环渲染几页,用 overflow
-   *   判断这一页是否超出画布——超出即报错,不静默裁切内容。
-   */
-  function renderCard(data, params, pageNum) {
-    params = params || {};
-    pageNum = Math.max(1, Number(pageNum) || 1);
+  /* 封面与正文页共用的那一层:参数、配色、色斑、头版文字、字母印记。
+     抽出来是因为 renderCover() 需要一字不差的同一套外观——封面若自己
+     重写一遍配色与印记逻辑,两种图迟早会漂移(印记的两字母规则就是个例子:
+     改一处忘一处,封面写 A 而正文写 Au)。
+
+     返回 accentHue,调用方渲染色斑之外若还要用色相可以接着用。 */
+  function renderShell(data, params) {
     applyParams(params);
 
     const accent = params['palette.accent'] || data.themeColor;
@@ -724,6 +755,85 @@
       heroSlot.innerHTML =
         `<div class="hero-mark" data-len="${mark.length}">${esc(mark)}</div>`;
     }
+
+    return accentHue;
+  }
+
+  /**
+   * 封面骨架的渲染入口(covers/*.css),与 renderCard 平行、互不调用。
+   *
+   * 封面是**独立的一张海报**,不参与内容池分页:它不放任何章节块,
+   * 出图时由 render.py 单独走一趟(注入 covers/<name>.css 而非
+   * layouts/<name>.css)。因此这里没有 pageNum,也不碰 buildPagingPlan——
+   * H10 那道溢出闸门的适用范围一点没变,仍然只管正文页。
+   *
+   * info = { totalPages } —— 轮播总张数(= 1 张封面 + N 张正文页)。
+   *   导航片(E5)要按这个数出片,所以 render.py 必须先渲正文、拿到 N,
+   *   再来渲封面。缺省时退化成只有封面一张。
+   *
+   * 返回 { page: 1, pages: totalPages, overflow: false } —— 与 renderCard
+   * 同形,好让 render.py 用同一套代码读结果。封面高度由骨架定死,
+   * 不存在内容溢出的可能,overflow 恒 false。
+   */
+  function renderCover(data, params, info) {
+    params = params || {};
+    info = info || {};
+    renderShell(data, params);
+
+    const canvasHeight = Number(params['canvas.height']) || 0;
+    if (!canvasHeight) {
+      throw new Error(
+        'aurora-glass 的封面需要非空的 canvas.height(封面与正文页同一画布比例);' +
+        '实收: ' + JSON.stringify(params['canvas.height']));
+    }
+
+    const stage = document.getElementById('stage');
+    const grid = document.getElementById('grid');
+    const totalPages = Math.max(1, Number(info.totalPages) || 1);
+
+    /* 章节区清空(data-n="0")。封面骨架本就把 .grid 隐藏,这里仍显式清一次:
+       封面与正文页共用同一份 DOM,不清会留下上一趟渲染的残留块。 */
+    commitBlocks(data.blocks || [], 0, 0, grid);
+
+    stage.dataset.page = 1;
+    stage.dataset.role = 'cover';
+    /* 只有封面骨架会读它。整卡骨架的封面页 role 也是 'cover',若只靠 role
+       就无法区分"整卡骨架的第一页"和"专用封面",故另给一个 mode。 */
+    stage.dataset.mode = 'poster';
+
+    const tagline = document.getElementById('cover-tagline');
+    tagline.textContent = data.tagline || '';
+
+    renderRail(1, totalPages, Number(params['layout.railSize'] ?? 56));
+
+    return { page: 1, pages: totalPages, overflow: false, canvasHeight };
+  }
+
+  /**
+   * data    = { name, nameEn, category, themeColor, hero, blocks: [...] }
+   *           字段说明见同目录 schema.md。emoji 字段被刻意忽略(宪法 H8)。
+   * params  = space.json 的点分键名 → 值。缺省时用 :root 里的默认值。
+   * pageNum = 要渲染第几页,从 1 起。仅 canvas.height 非空(分页模式)时有意义;
+   *           长图模式忽略此参数,行为与改造前完全一致。
+   * railInfo = { offset, total } —— 可选。生产组配了专用封面时,正文页在轮播里
+   *           的序号要整体后移(offset=1)、总数要算上封面(total=正文页数+1),
+   *           导航片(E5)才数得对。缺省即 offset 0 / total 取正文页数,
+   *           与没有封面骨架时逐位相同。
+   *
+   * 返回 { page, pages, overflow, contentHeight, canvasHeight }:
+   *   长图模式恒为 { page:1, pages:1, overflow:false }(调用方不读这些值);
+   *   分页模式下 render.py 用 pages 决定要循环渲染几页,用 overflow
+   *   判断这一页是否超出画布——超出即报错,不静默裁切内容。
+   */
+  function renderCard(data, params, pageNum, railInfo) {
+    params = params || {};
+    pageNum = Math.max(1, Number(pageNum) || 1);
+    railInfo = railInfo || {};
+    renderShell(data, params);
+
+    /* 专用封面才有的标记,正文页不能带着它——两者虽然由 render.py 分两趟、
+       各在独立页面里渲染,但清掉这一位就不依赖"调用方一定分页面"这个前提。 */
+    delete document.getElementById('stage').dataset.mode;
 
     /* 内容池:顺序即优先级,最重要的写在前面。2026-07-28 起取消 6 块硬上限
        (见 STYLE.md 4.3)——块数不再决定"塞不塞得下",只决定"出几张图"。
@@ -764,7 +874,14 @@
 
     stage.dataset.page = pageNum;
     stage.dataset.role = target.role;
-    renderRail(Math.min(pageNum, totalPages), totalPages,
+
+    /* 导航片(E5)数的是**轮播总张数**,不是正文页数。生产组配了专用封面
+       (covers/*.css)时,封面自己占掉第 1 张,正文页在轮播里的序号整体后移
+       一位——railInfo 就是 render.py 用来把这个偏移告诉引擎的。
+       缺省(offset 0 / total 取正文页数)时与改造前逐位相同,故既有产物零像素差。 */
+    const railOffset = Number(railInfo.offset) || 0;
+    const railTotal = Number(railInfo.total) || totalPages;
+    renderRail(Math.min(pageNum, totalPages) + railOffset, railTotal,
                Number(params['layout.railSize'] ?? 56));
     commitBlocks(pool, target.startIndex, target.count, grid);
 
@@ -889,6 +1006,7 @@
   }
 
   window.renderCard = renderCard;
+  window.renderCover = renderCover;
 </script>
 </body>
 </html>
