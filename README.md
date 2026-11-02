@@ -1,12 +1,29 @@
 # kcard
 
+[中文](README.md) | [English](README.en.md)
+
 结构化 JSON → HTML 渲染 → Playwright 无头截图,产出适合社交平台传播的知识卡片图。
 
 项目分「设计部 / 生产部」两层:设计部产出风格系统(视觉规范 + 参数空间),
 生产部按业务分组,各组选定一套风格后自由搭配、批量产卡。详见 `PLAN.md`。
 
-排版与文字全部由 HTML 渲染,不用 AI 逐张生图,因此**文字零错误、风格一致、可批量**;
+排版与文字全部由 HTML 渲染,不用 AI 逐张生图,因此**文字由数据控制、风格一致、可批量**;
 同一份数据重复渲染像素级一致。AI 只负责两件事:填卡片数据、生成无文字的主图素材。
+
+## 环境准备
+
+建议在 macOS 上使用 Python 3.13。当前仓库没有锁定依赖清单，以下为脚本使用的基础依赖：
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+pip install playwright Pillow numpy scipy
+python -m playwright install chromium
+```
+
+先看 [风格看板](design/GALLERY.md)，再阅读对应风格的数据契约与生产组配置。示例预览：
+
+![知识卡片示例](production/food-encyclopedia/cards/tomato/output.png)
 
 ## 快速开始
 
@@ -74,3 +91,9 @@ python scripts/gallery.py
 某套风格的具体规则看它自己的 `styles/<name>/STYLE.md`。
 
 现有生产组见 `production/` 目录,各组的选题范围与口吻规范见其 `brief.md`。
+
+## 使用边界与许可
+
+素材、数据正确性与字体安装仍需自行核对。确定性渲染不保证内容无误；更改风格后可按现有回归脚本复核。本次文档整理未重新渲染卡片。
+
+当前默认分支未提供项目级许可证文件；公开可见不等于授予复用许可。第三方依赖及素材保留各自条款。
