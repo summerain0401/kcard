@@ -1,6 +1,6 @@
 # kcard
 
-[中文](README.md) | [English](README.en.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 Structured JSON → HTML rendering → Playwright screenshots for shareable knowledge cards. Text comes from structured data, while AI can help draft content or create text-free hero images. Deterministic rendering does not guarantee factual or typographical correctness.
 

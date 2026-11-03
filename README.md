@@ -1,18 +1,16 @@
 # kcard
 
-[中文](README.md) | [English](README.en.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-结构化 JSON → HTML 渲染 → Playwright 无头截图,产出适合社交平台传播的知识卡片图。
+Structured JSON → HTML rendering → Playwright screenshots for shareable knowledge cards. Text comes from structured data, while AI can help draft content or create text-free hero images. Deterministic rendering does not guarantee factual or typographical correctness.
 
-项目分「设计部 / 生产部」两层:设计部产出风格系统(视觉规范 + 参数空间),
-生产部按业务分组,各组选定一套风格后自由搭配、批量产卡。详见 `PLAN.md`。
+Design systems and production content are separate: `design/styles/` defines styles, layouts, presets, and data contracts; `production/` selects styles and stores card content. See [PLAN.md](PLAN.md) and the generated [style gallery](design/GALLERY.md).
 
-排版与文字全部由 HTML 渲染,不用 AI 逐张生图,因此**文字由数据控制、风格一致、可批量**;
-同一份数据重复渲染像素级一致。AI 只负责两件事:填卡片数据、生成无文字的主图素材。
+![Example knowledge card](production/food-encyclopedia/cards/tomato/output.png)
 
-## 环境准备
+## Setup
 
-建议在 macOS 上使用 Python 3.13。当前仓库没有锁定依赖清单，以下为脚本使用的基础依赖：
+Designed for macOS with Python 3.13. There is no locked dependency manifest yet; basic script dependencies are:
 
 ```bash
 python3.13 -m venv .venv
@@ -21,79 +19,26 @@ pip install playwright Pillow numpy scipy
 python -m playwright install chromium
 ```
 
-先看 [风格看板](design/GALLERY.md)，再阅读对应风格的数据契约与生产组配置。示例预览：
+Styles use macOS fonts such as Songti SC, Didot, and PingFang SC. Other operating systems can substitute fonts and alter layout; cross-platform pixel consistency is not promised.
 
-![知识卡片示例](production/food-encyclopedia/cards/tomato/output.png)
-
-## 快速开始
+## Use
 
 ```bash
-# 环境:Python 3.13 + playwright(chromium)+ Pillow + numpy + scipy
-python scripts/cutout.py production/food-encyclopedia/cards/tomato/hero.png   # 主图去底 → hero-cut.png
-python scripts/render.py production/food-encyclopedia/cards/tomato            # 取色 + 渲染 → output.png
-```
-
-> ⚠️ **字体依赖**:风格使用 macOS 系统字体(Songti SC / Didot / PingFang SC)。
-> 本项目按 macOS 单机渲染设计,不追求跨平台一致;在 Linux/Windows 上会
-> fallback 到其他字体,版式效果与设计稿不一致。
-
-## 目录结构
-
-```
-design/styles/<name>/    # 一个目录 = 一套风格(设计部所有)
-  STYLE.md               #   风格宪法:构成要素、禁则、高级感判据
-  space.json             #   参数空间:可调维度的取值域 + 跨维不变式
-  engine.html            #   参数化渲染引擎(通用外观 + renderCard)
-  layouts/<layout>.css   #   版式骨架,只管头版定位,渲染时注入
-  presets/<preset>.json  #   示范搭配:选定骨架 + 一整套参数
-  preview/<preset>.png   #   各搭配的预览图
-  schema.md sample.json  #   数据字段说明与示例数据
-production/<group>/      # 一个目录 = 一个生产组(生产部所有)
-  profile.json           #   选 style + preset,可覆写 layout 与 params
-  cards/<topic>/
-    card.json            #   {"data": {...}},纯内容,不含风格声明
-    hero.png             #   AI 生成的主图素材(需透明底)
-    hero-cut.png         #   去底后的素材
-    output.png           #   渲染产物
-scripts/
-  render.py              # 渲染脚本,读 profile 定位风格与搭配
-  cutout.py              # 主图去底(中性背景键出为 alpha)
-  batch.py               # 按生产组批量产卡,共享单浏览器实例
-  style-check.py         # 组上线闸门:参数取值域 + 跨维不变式校验
-  regress.py             # 改风格后,对在用该风格的组重渲染做像素 diff
-  gallery.py             # 从各风格的 STYLE.md/space.json/presets 生成 design/GALLERY.md
-```
-
-```bash
-# 生产渲染(单卡)
+python scripts/cutout.py production/food-encyclopedia/cards/tomato/hero.png
 python scripts/render.py production/food-encyclopedia/cards/tomato
-# 按组批量产卡
 python scripts/batch.py production/food-encyclopedia
-# 组上线前的闸门校验
 python scripts/style-check.py production/food-encyclopedia
-# 风格自证预览(不碰 production/)
-python scripts/render.py --style editorial-mono --preset airy
-# 改动某套风格后,确认不破坏所有在用该风格的组(默认只检查不写)
-python scripts/regress.py editorial-mono
-# 更新选型看板
+python scripts/regress.py
 python scripts/gallery.py
 ```
 
-生产组的卡片本身不声明使用哪套风格,由同组 `profile.json` 的 `style` / `preset`
-决定。参数优先级 `profile.params > preset.params`,`space.json` 未声明的参数键
-一律报错——未声明即不可调,需向设计部提案扩展。
-风格之间完全隔离,新增风格不影响既有风格。字段详见对应风格的 `schema.md`。
+`cutout.py` creates transparent hero assets; `render.py` creates `output.png` or paginated `output-01.png`, etc. `batch.py` renders a group. `style-check.py` checks parameter limits and invariants; `regress.py` checks pixel regressions for styles in use. `gallery.py` regenerates the gallery.
 
-## 风格与生产组
+## Data flow
 
-每套风格有自己的设计原则、构成要素与禁则,不再有"全项目统一"的规则——
-两套风格甚至气质相反(一深色一浅色)。选型与现状看 `design/GALLERY.md`,
-某套风格的具体规则看它自己的 `styles/<name>/STYLE.md`。
+`production/<group>/profile.json` selects a style/preset and permitted overrides. Each card contains `card.json` with a `data` object and optional hero images. The style resolves its `STYLE.md`, `space.json`, `engine.html`, layout CSS, preset JSON, and `schema.md`. Current examples cover food, chemical elements, and English vocabulary. Aurora Glass uses 3:4 pagination; other style contracts differ.
 
-现有生产组见 `production/` 目录,各组的选题范围与口吻规范见其 `brief.md`。
+Keep HTML/CSS in the design system and content in production groups. Check the selected style's schema before authoring new JSON. Verify content, image provenance, and fonts yourself. This documentation update did not re-render cards.
 
-## 使用边界与许可
-
-素材、数据正确性与字体安装仍需自行核对。确定性渲染不保证内容无误；更改风格后可按现有回归脚本复核。本次文档整理未重新渲染卡片。
-
-当前默认分支未提供项目级许可证文件；公开可见不等于授予复用许可。第三方依赖及素材保留各自条款。
+## License
+The default branch does not include a project-level license file. Public visibility does not itself grant reuse rights. Third-party dependencies and assets retain their own terms.
